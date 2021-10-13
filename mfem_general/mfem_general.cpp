@@ -32,7 +32,7 @@ typedef struct error_values {
 class Problem
 {
    public:
-      Problem(): hysteresis(0.0), max_elem_error(1.0e-10), order(2)
+      Problem(): hysteresis(0.0), max_elem_error(1.0e-8), order(2)
       {
       }
       void run();
@@ -226,7 +226,7 @@ void Problem::run()
       exact_error(step,fespace.GetNDofs(), x, error_zero, u);
 
       //Stop the loop if no more elements are marked for refinement or the desired number of DOFs is reached.
-      if(!refine(a, f, fespace, x, error_zero ,refiner) || fespace.GetNDofs() > 20000)
+      if(!refine(a, f, fespace, x, error_zero ,refiner) || fespace.GetNDofs() > 100000)
       {
          break;
       }
@@ -337,11 +337,11 @@ double bdr_func(const Vector &p)
       phi = atan2(p(1),p(0));
    }
 
-   return pow(radius,alpha) * sin(alpha * phi);
+   return pow(radius,alpha) * sin(alpha * phi) *  (p(2)*p(2));
 }
 
 // Right hand side function
 double rhs_func(const Vector &p)
 {
-   return -200*exp(-10*(p(0)+p(1)));
+   return -2;
 }

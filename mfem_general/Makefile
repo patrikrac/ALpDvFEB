@@ -6,10 +6,10 @@ CFLAGS=-O3 -std=c++11 -I$(MFEM_DIR)
 all: mfem_general
 
 mfem_general : mfem_general.cpp
-	$(CC) $(CFLAGS) $> -o $@ -L$(MFEM_DIR) -lmfem
+	$(CC) $(CFLAGS) $< -o $@ -L$(MFEM_DIR) -lmfem
 
 clean: 
-	rm mfem_general solution.vtk error.tex mfem_error.txt
+	rm mfem_general solution.vtk table.tex errorMFEM.txt
 
 
 

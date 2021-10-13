@@ -52,7 +52,7 @@ typedef struct metrics {
 } metrics;
 
 //----------------------------------------------------------------
-//Define the Boundary condition function that is to be applied on this ProblemHP.
+//Define the Boundary condition function that is to be applied on this Problem.
 //----------------------------------------------------------------
 template <int dim>
 class BoundaryValues : public Function<dim>
@@ -65,7 +65,7 @@ template <int dim>
 double BoundaryValues<dim>::value(const Point<dim> &p, const unsigned int /*component*/) const
 {   
     //Formulate the boundary function
-    double alpha = 2.0/3.0;
+    double alpha = 1.0/2.0;
     double radius = sqrt(p(0)*p(0) + p(1)*p(1));
     double phi;
     if(p(1) < 0)
@@ -77,11 +77,11 @@ double BoundaryValues<dim>::value(const Point<dim> &p, const unsigned int /*comp
         phi = atan2(p(1), p(0));
     }
 
-    return pow(radius, alpha) * sin(alpha * phi);
+    return pow(radius, alpha) * sin(alpha * phi) * (p(2)*p(2));
 }
 
 //------------------------------
-//Define the the right hand side function of the ProblemHP.
+//Define the the right hand side function of the Problem.
 //------------------------------
 template <int dim>
 class RHS_function : public Function<dim>
@@ -94,11 +94,11 @@ template <int dim>
 double RHS_function<dim>::value(const Point<dim> &p, const unsigned int /*component*/) const
 {
     //Formulate right hand side function
-    return 0;
+    return -2.0;
 }
 
 //------------------------------
-//Define the exact soliution of the ProblemHP., in order to calculate the exact error.
+//Define the exact soliution of the Problem., in order to calculate the exact error.
 //------------------------------
 template <int dim>
 class Solution : public Function<dim>
@@ -110,8 +110,8 @@ public:
 template <int dim>
 double Solution<dim>::value(const Point<dim> &p, const unsigned int /*component*/) const
 {
-    //Formulate the exact solution of the ProblemHP. (Might be the same as the boundary function but is declared seperately for better overview)
-    double alpha = 2.0/3.0;
+    //Formulate the exact solution of the Problem. (Might be the same as the boundary function but is declared seperately for better overview)
+    double alpha = 1.0/2.0;
     double radius = sqrt(p(0)*p(0) + p(1)*p(1));
     double phi;
     if(p(1) < 0)
@@ -123,7 +123,7 @@ double Solution<dim>::value(const Point<dim> &p, const unsigned int /*component*
         phi = atan2(p(1), p(0));
     }
 
-    return pow(radius, alpha) * sin(alpha * phi);
+    return pow(radius, alpha) * sin(alpha * phi)  * (p(2)*p(2));
 }
 
 //------------------------------
@@ -205,7 +205,7 @@ void ProblemHP<dim>::make_grid()
 {
     //Appropriate grid generation has to be implemented in here!
     //The default grid generated will be a unit square/cube depending on the dimensionality of the problem.
-    GridGenerator::hyper_rectangle(triangulation, Point<3>(-0.5,0,0), Point<3>(0.5,1,1));
+    GridGenerator::hyper_rectangle(triangulation, Point<3>(-0.5,0.0,0.0), Point<3>(0.5,1.0,1.0));
 
     triangulation.refine_global(2);
 
@@ -495,7 +495,7 @@ void ProblemHP<dim>::run()
         calculate_exact_error(cycle);
 
         //Netgen similar condition to reach desired number of degrees of freedom
-        if (get_n_dof() > 20000)
+        if (get_n_dof() > 100000)
         {
             break;
         }
@@ -566,7 +566,7 @@ void Problem<dim>::make_grid()
      //Appropriate grid generation has to be implemented in here!
     //The default grid generated will be a unit square/cube depending on the dimensionality of the problem.
 
-    GridGenerator::hyper_rectangle(triangulation, Point<3>(-0.5,0,0), Point<3>(0.5,1,1));
+    GridGenerator::hyper_rectangle(triangulation, Point<3>(-0.5,0.0,0.0), Point<3>(0.5,1.0,1.0));
     
     triangulation.refine_global(2);
 
@@ -826,7 +826,7 @@ void Problem<dim>::run()
 
         calculate_exact_error(cycle);
         //Netgen similar condition to reach desired number of degrees of freedom
-        if (get_n_dof() > 20000)
+        if (get_n_dof() > 100000)
         {
             break;
         }
@@ -840,7 +840,7 @@ void Problem<dim>::run()
 
 int main(int argc, char** argv)
 {
-    Problem<3> l;
+    ProblemHP<3> l;
     l.run();
     return 0;
 }

@@ -46,7 +46,7 @@ class Problem:
         Dimensionality has to be taken into account.
         """
 
-        brick = OrthoBrick(Pnt(-0.5,0,0), Pnt(0.5,1,1)).bc('bnd')
+        brick = OrthoBrick(Pnt(-0.5,0.0,0.0), Pnt(0.5,1.0,1.0)).bc('bnd')
 
         geo = CSGeometry()
         geo.Add (brick)
@@ -87,7 +87,7 @@ class Problem:
 
         #Define the Linear form corresponding to the given problem
         f = LinearForm(self.fes)
-        f += 2*v*dx
+        f += -2.0*v*dx
 
         #Define the solver to be used to solve the problem
         c = Preconditioner(a, "local")
@@ -209,7 +209,7 @@ class Problem:
 
         """
         cycle = 0
-        while self.fes.ndof < 20000:
+        while self.fes.ndof < 100000:
             self.mesh.Refine()
 
             self.gfu.Set(self.g, definedon=self.mesh.Boundaries("bnd"))
