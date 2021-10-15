@@ -32,7 +32,7 @@ typedef struct error_values {
 class Problem
 {
    public:
-      Problem(): hysteresis(0.0), max_elem_error(1.0e-8), order(2)
+      Problem(): hysteresis(0.2), max_elem_error(1.0e-10), order(2)
       {
       }
       void run();
@@ -226,7 +226,7 @@ void Problem::run()
       exact_error(step,fespace.GetNDofs(), x, error_zero, u);
 
       //Stop the loop if no more elements are marked for refinement or the desired number of DOFs is reached.
-      if(!refine(a, f, fespace, x, error_zero ,refiner) || fespace.GetNDofs() > 100000)
+      if(!refine(a, f, fespace, x, error_zero ,refiner) || fespace.GetNDofs() > 1000000)
       {
          break;
       }
@@ -277,11 +277,11 @@ void Problem::exact_error(int cycle, int dofs, GridFunction &x, GridFunction &er
 void Problem::output_table()
 {
    std::ofstream output("table.tex");
-   std::ofstream output_custom("errorMFEM.txt");
+   std::ofstream output_custom("error_mfem.txt");
 
    output_custom << "MFEM" << endl;
    output_custom << "$n_\\text{dof}$" << endl;
-   output_custom << "$\\norm{u - u_h}_{L^\\infty}$" << endl;
+   output_custom << "$\\left\\|u - u_h\\right\\| _{L^\\infty}$" << endl;
    output_custom << table_vector.size() << endl;
 
    output << "\\begin{table}[h]" << endl;
@@ -324,6 +324,7 @@ int main(int argc, char *argv[])
 // Exact solution, used for the Dirichlet BC.
 double bdr_func(const Vector &p)
 {
+   /*
    double radius = sqrt(p(0)*p(0) + p(1)*p(1));
    double phi;
    double alpha = 1.0/2.0;
@@ -338,10 +339,12 @@ double bdr_func(const Vector &p)
    }
 
    return pow(radius,alpha) * sin(alpha * phi) *  (p(2)*p(2));
+   */
+   return exp(-10 * (p(0)+p(1))) * (p(2)*p(2));
 }
 
 // Right hand side function
 double rhs_func(const Vector &p)
 {
-   return -2;
+   return -(200*(p(2)*p(2)) + 2)*exp(-10 * (p(0)+p(1)));
 }

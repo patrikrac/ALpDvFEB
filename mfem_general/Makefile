@@ -9,7 +9,7 @@ mfem_general : mfem_general.cpp
 	$(CC) $(CFLAGS) $< -o $@ -L$(MFEM_DIR) -lmfem
 
 clean: 
-	rm mfem_general solution.vtk table.tex errorMFEM.txt
+	rm mfem_general solution.vtk table.tex error_mfem.txt
 
 
 
