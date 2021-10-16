@@ -625,7 +625,7 @@ void Problem<dim>::make_grid()
 
     GridGenerator::hyper_rectangle(triangulation, Point<3>(0.0, 0.0, 0.0), Point<3>(1.0, 1.0, 1.0));
 
-    triangulation.refine_global(2);
+    triangulation.refine_global(3);
 
     std::cout << "Number of active cells: " << triangulation.n_active_cells() << std::endl;
 }
@@ -776,9 +776,9 @@ void Problem<dim>::output_results()
     convergence_table.set_tex_caption("dofs", "\\# dofs");
     convergence_table.set_tex_caption("Linfty", "$\\left\\|u_h - I_hu\\right\\| _{L^\\infty}$");
     convergence_table.set_tex_caption("relativeLinfty", "$\\frac{\\left\\|u_h - I_hu\\right\\| _{L^\\infty}}{\\left\\|I_hu\\right\\| _{L^\\infty}}$");
-    convergence_table.set_tex_caption("error_p1", "$\\left\\|u_h(x_1) - I_hu(x_1)\\right\\| _{L^\\infty}$");
-    convergence_table.set_tex_caption("error_p2", "$\\left\\|u_h(x_2) - I_hu(x_2)\\right\\| _{L^\\infty}$");
-    convergence_table.set_tex_caption("error_p3", "$\\left\\|u_h(x_3) - I_hu(x_3)\\right\\| _{L^\\infty}$");
+    convergence_table.set_tex_caption("error_p1", "$\\left\\|u_h(x_1) - I_hu(x_1)\\right\\| $");
+    convergence_table.set_tex_caption("error_p2", "$\\left\\|u_h(x_2) - I_hu(x_2)\\right\\| $");
+    convergence_table.set_tex_caption("error_p3", "$\\left\\|u_h(x_3) - I_hu(x_3)\\right\\| $");
 
     std::ofstream error_table_file("error.tex");
     convergence_table.write_tex(error_table_file);
@@ -787,7 +787,7 @@ void Problem<dim>::output_results()
 
     output_custom1 << "$deal.ii$" << std::endl;
     output_custom1 << "$n_\\text{dof}$" << std::endl;
-    output_custom1 << "$\\left\\|u_h - I_hu\\right\\| _{L^\\infty}$" << std::endl;
+    output_custom1 << "$\\left\\|u_h - I_hu\\right\\| $" << std::endl;
     output_custom1 << convergence_vector.size() << std::endl;
     for (size_t i = 0; i < convergence_vector.size(); i++)
     {
@@ -797,9 +797,9 @@ void Problem<dim>::output_results()
 
     std::ofstream output_custom2("error_deal2_p1.txt");
 
-    output_custom2 << "$deal.ii$" << std::endl;
+    output_custom2 << "$\\left\\|u_h(x_1) - I_hu(x_1)\\right\\| $" << std::endl;
     output_custom2 << "$n_\\text{dof}$" << std::endl;
-    output_custom2 << "$\\left\\|u_h(x_1) - I_hu(x_1)\\right\\| _{L^\\infty}$" << std::endl;
+    output_custom2 << "$\\left\\|u_h(x) - I_hu(x)\\right\\|$" << std::endl;
     output_custom2 << convergence_vector.size() << std::endl;
     for (size_t i = 0; i < convergence_vector.size(); i++)
     {
@@ -809,9 +809,9 @@ void Problem<dim>::output_results()
 
     std::ofstream output_custom3("error_deal2_p2.txt");
 
-    output_custom3 << "$deal.ii$" << std::endl;
+    output_custom3 << "$\\left\\|u_h(x_2) - I_hu(x_2)\\right\\|$" << std::endl;
     output_custom3 << "$n_\\text{dof}$" << std::endl;
-    output_custom3 << "$\\left\\|u_h(x_2) - I_hu(x_2)\\right\\| _{L^\\infty}$" << std::endl;
+    output_custom3 << "$\\left\\|u_h(x) - I_hu(x)\\right\\| $" << std::endl;
     output_custom3 << convergence_vector.size() << std::endl;
     for (size_t i = 0; i < convergence_vector.size(); i++)
     {
@@ -821,9 +821,9 @@ void Problem<dim>::output_results()
 
     std::ofstream output_custom4("error_deal2_p3.txt");
 
-    output_custom4 << "$deal.ii$" << std::endl;
+    output_custom4 << "$\\left\\|u_h(x_3) - I_hu(x_3)\\right\\|$" << std::endl;
     output_custom4 << "$n_\\text{dof}$" << std::endl;
-    output_custom4 << "$\\left\\|u_h(x_3) - I_hu(x_3)\\right\\| _{L^\\infty}$" << std::endl;
+    output_custom4 << "$\\left\\|u_h(x) - I_hu(x)\\right\\| $" << std::endl;
     output_custom4 << convergence_vector.size() << std::endl;
     for (size_t i = 0; i < convergence_vector.size(); i++)
     {
@@ -920,6 +920,7 @@ void Problem<dim>::run()
         solve();
 
         calculate_exact_error(cycle);
+
         //Netgen similar condition to reach desired number of degrees of freedom
         if (get_n_dof() > 100000)
         {
