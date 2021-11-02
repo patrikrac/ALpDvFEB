@@ -106,18 +106,19 @@ template <int dim>
 double BoundaryValues<dim>::value(const Point<dim> &p, const unsigned int /*component*/) const
 {
     //Formulate the boundary function
+    
     /*
     //Problem with singularity 
     double alpha = 1.0/2.0;
-    double radius = sqrt(p(0)*p(0) + p(1)*p(1));
+    double radius = sqrt((p(0)-0.5)*(p(0)-0.5) + p(1)*p(1));
     double phi;
     if(p(1) < 0)
     {
-        phi = 2*M_PI + atan2(p(1), p(0));
+        phi = 2*M_PI + atan2(p(1), p(0)-0.5);
     }
     else
     {
-        phi = atan2(p(1), p(0));
+        phi = atan2(p(1), p(0)-0.5);
     }
 
     return pow(radius, alpha) * sin(alpha * phi) * (p(2)*p(2));
@@ -129,8 +130,10 @@ double BoundaryValues<dim>::value(const Point<dim> &p, const unsigned int /*comp
    return sin(k*p(0)) * cos(2*k*p(1)) * exp(p(2));
    */
 
+    
     //Problem using the exponential function
     return exp(-10 * (p(0) + p(1))) * (p(2) * p(2));
+    
 }
 
 //------------------------------
@@ -148,7 +151,7 @@ double RHS_function<dim>::value(const Point<dim> &p, const unsigned int /*compon
 {
     //Formulate right hand side function
 
-    /*
+    /* 
     return -2.0;
     */
 
@@ -157,7 +160,9 @@ double RHS_function<dim>::value(const Point<dim> &p, const unsigned int /*compon
     return (k * k + 4 * k - 1) * sin(k * p(0)) * cos(2 * k * p(1)) * exp(p(2));
     */
 
+   
     return -(200 * (p(2) * p(2)) + 2) * exp(-10 * (p(0) + p(1)));
+    
 }
 
 //------------------------------
@@ -174,18 +179,19 @@ template <int dim>
 double Solution<dim>::value(const Point<dim> &p, const unsigned int /*component*/) const
 {
     //Formulate the boundary function
+    
     /*
     //Problem with singularity 
     double alpha = 1.0/2.0;
-    double radius = sqrt(p(0)*p(0) + p(1)*p(1));
+    double radius = sqrt((p(0)-0.5)*(p(0)-0.5)+ p(1)*p(1));
     double phi;
     if(p(1) < 0)
     {
-        phi = 2*M_PI + atan2(p(1), p(0));
+        phi = 2*M_PI + atan2(p(1), p(0)-0.5);
     }
     else
     {
-        phi = atan2(p(1), p(0));
+        phi = atan2(p(1), p(0)-0.5);
     }
 
     return pow(radius, alpha) * sin(alpha * phi) * (p(2)*p(2));
@@ -197,8 +203,10 @@ double Solution<dim>::value(const Point<dim> &p, const unsigned int /*component*
    return sin(k*p(0)) * cos(2*k*p(1)) * exp(p(2));
    */
 
+  
     //Problem using the exponential function
     return exp(-10 * (p(0) + p(1))) * (p(2) * p(2));
+    
 }
 
 //------------------------------
@@ -766,6 +774,9 @@ void Problem<dim>::output_results()
 
     convergence_table.set_precision("Linfty", 3);
     convergence_table.set_precision("relativeLinfty", 3);
+    convergence_table.set_precision("error_p1", 3);
+    convergence_table.set_precision("error_p2", 3);
+    convergence_table.set_precision("error_p3", 3);
     convergence_table.set_scientific("Linfty", true);
     convergence_table.set_scientific("relativeLinfty", true);
     convergence_table.set_scientific("error_p1", true);

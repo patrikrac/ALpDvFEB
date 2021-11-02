@@ -175,6 +175,8 @@ class Problem:
         max_relative_error = max_error / max(Integrate(self.uexact,  self.mesh, VOL, element_wise=True))
         values.append(max_relative_error)
 
+        #TODO: Use the coefficient function capabilities to calc the pointwise error.
+
         self.table_list.append(values)
 
 
