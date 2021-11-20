@@ -2,11 +2,13 @@
 //This is a general MFEM program designed to solve Laplace-equations using the MFEM Library.
 //The dimensionality of the programm can be changed by altering the input grid.
 
-#include "mfem.hpp"
+
 #include <vector>
 #include <fstream>
 #include <iostream>
 #include <math.h>
+
+#include <mfem.hpp>
 
 using namespace std;
 using namespace mfem;
@@ -270,7 +272,7 @@ void Problem::run()
       exact_error(step, fespace.GetNDofs(), x, error_zero, u);
 
       //Stop the loop if no more elements are marked for refinement or the desired number of DOFs is reached.
-      if (!refine(a, f, fespace, x, error_zero, refiner) || fespace.GetNDofs() > 1000000)
+      if (!refine(a, f, fespace, x, error_zero, refiner) || fespace.GetNDofs() > 100000)
       {
          break;
       }
@@ -345,6 +347,7 @@ void Problem::output_table()
       output_p2 << table_vector[i].dofs << " " << table_vector[i].error_p2 << endl;
       output_p3 << table_vector[i].dofs << " " << table_vector[i].error_p3 << endl;
    }
+
    //TODO: Title for point wise error files.
    output << "\t\t\\end{tabular}" << endl;
    output << "\t\\end{center}" << endl;
@@ -368,10 +371,11 @@ int main(int argc, char *argv[])
    l.run();
 }
 
+
 // Exact solution, used for the Dirichlet BC.
 double bdr_func(const Vector &p)
 {
-   /*
+   
    double radius = sqrt((p(0)-0.5)*(p(0)-0.5) + p(1)*p(1));
    double phi;
    double alpha = 1.0/2.0;
@@ -386,13 +390,16 @@ double bdr_func(const Vector &p)
    }
 
    return pow(radius,alpha) * sin(alpha * phi) *  (p(2)*p(2));
-   */
+
    /*
    return exp(-10 * (p(0) + p(1))) * (p(2) * p(2));
    */
+  /*
    double k = 8.0;
    return sin(k*p(0)) * cos(2*k*p(1)) * exp(p(2)); 
+   */
 }
+
 
 // Right hand side function
 double rhs_func(const Vector &p)
@@ -400,6 +407,9 @@ double rhs_func(const Vector &p)
    /*
    return -(200 * (p(2) * p(2)) + 2) * exp(-10 * (p(0) + p(1)));
    */
+  /*
    double k = 8.0;
    return (k * k + 4 * k - 1) * sin(k * p(0)) * cos(2 * k * p(1)) * exp(p(2));
+   */
+  return -2.0;
 }
