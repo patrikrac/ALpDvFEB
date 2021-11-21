@@ -120,7 +120,7 @@ private:
 //----------------------------------------------------------------
 void Problem::make_mesh()
 {
-   const char *mesh_file = "unit_cube.mesh";
+   const char *mesh_file = "../unit_cube.mesh";
    mesh = Mesh::LoadFromFile(mesh_file);
    for (int i = 0; i < 3; i++)
    {
