@@ -18,7 +18,9 @@ endif()
 enable_language(C)
 enable_language(CXX)
 
+target_include_directories(mfem_general PRIVATE ${MFEM_INCLUDE_DIRS})
+
 add_executable(mfem_general mfem_general.cpp)
 
-target_link_libraries(mfem_general PRIVATE ${mfem_LIBRARIES})
-target_include_directories(mfem_general PRIVATE ${MFEM_INCLUDE_DIRS})
+target_link_libraries(mfem_general PRIVATE ${MFEM_LIBRARIES})
+
