@@ -310,9 +310,9 @@ void Problem::exact_error(int cycle, int dofs, GridFunction &x, GridFunction &er
    values.error = x.ComputeMaxError(u);
    values.relative_error = values.error / error_zero.ComputeMaxError(u);
 
-   values.error_p1 = abs(postprocessor1(x, mesh) - bdr_func(Vector(new double[] {0.125,0.125,0.125}, 3)));
-   values.error_p2 = abs(postprocessor2(x, mesh) - bdr_func(Vector(new double[] {0.25,0.25,0.25}, 3)));
-   values.error_p3 = abs(postprocessor3(x, mesh) - bdr_func(Vector(new double[] {0.5,0.5,0.5}, 3)));
+   values.error_p1 = abs(postprocessor1(x, mesh) - bdr_func(Vector(new double[3] {0.125,0.125,0.125}, 3)));
+   values.error_p2 = abs(postprocessor2(x, mesh) - bdr_func(Vector(new double[3] {0.25,0.25,0.25}, 3)));
+   values.error_p3 = abs(postprocessor3(x, mesh) - bdr_func(Vector(new double[3] {0.5,0.5,0.5}, 3)));
    table_vector.push_back(values);
 
    cout << "Error for step " << cycle << ": " << setprecision(3) << scientific << values.error << endl;
