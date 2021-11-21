@@ -10,10 +10,13 @@ message(STATUS "Looking for mfem ...")
 find_package(mfem REQUIRED NAMES MFEM)
 message(STATUS "Found mfem config in: ${mfem_DIR} (version ${MFEM_VERSION})")
 
+message(STATUS "Mfem compiler is: ${MFEM_CXX_COMPILER}")
+if (NOT CMAKE_CXX_COMPILER AND MFEM_CXX_COMPILER)
+  set(CMAKE_CXX_COMPILER "${MFEM_CXX_COMPILER}")
+endif()
+
 enable_language(C)
 enable_language(CXX)
-
-
 
 add_executable(mfem_general mfem_general.cpp)
 
