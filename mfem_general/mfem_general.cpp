@@ -2,13 +2,14 @@
 //This is a general MFEM program designed to solve Laplace-equations using the MFEM Library.
 //The dimensionality of the programm can be changed by altering the input grid.
 
+#include "mfem.hpp"
 
 #include <vector>
 #include <fstream>
 #include <iostream>
 #include <math.h>
 
-#include <mfem.hpp>
+
 
 using namespace std;
 using namespace mfem;
