@@ -169,20 +169,30 @@ class Problem:
         values.append(self.fes.ndof)
 
         l2_error = sqrt(Integrate((self.gfu - self.uexact)*(self.gfu - self.uexact), self.mesh))
-        #values.append(l2_error)
-
+        values.append(l2_error)
+        print("L2-error: ", l2_error)
+        
+        l2_relative_error = sqrt(Integrate((self.gfu - self.uexact)*(self.gfu - self.uexact),self.mesh)) / sqrt(Integrate(self.uexact*self.uexact, self.mesh))
+        values.append(l2_relative_error)
+        
         max_error = max(Integrate((self.gfu - self.uexact), self.mesh, VOL, element_wise=True))
         print("Max-error: ",  max_error)
-        values.append(max_error)
-
-        l2_relative_error = sqrt(Integrate((self.gfu - self.uexact)*(self.gfu - self.uexact),self.mesh)) / sqrt(Integrate(self.uexact*self.uexact, self.mesh))
-        #values.append(l2_relative_error)
-        #print("Relative error: ", l2_relative_error)
+        values.append(max_error)       
 
         max_relative_error = max_error / max(Integrate(self.uexact,  self.mesh, VOL, element_wise=True))
         values.append(max_relative_error)
 
-        #TODO: Use the coefficient function capabilities to calc the pointwise error.
+        ip1 = self.mesh(0.125, 0.125, 0.125)
+        error_p1 = abs(self.gfu(ip1) - self.uexact(ip1))
+        values.append(error_p1)
+        
+        ip2 = self.mesh(0.25, 0.25, 0.25)
+        error_p2 = abs(self.gfu(ip2) - self.uexact(ip2))
+        values.append(error_p2)
+        
+        ip3 = self.mesh(0.5, 0.5, 0.5)
+        error_p3 = abs(self.gfu(ip3) - self.uexact(ip3))
+        values.append(error_p3)
 
         self.table_list.append(values)
 
@@ -196,23 +206,47 @@ class Problem:
         f.write("\t\\begin{center}\n")
         f.write("\t\t\\begin{tabular}{|c|c|c|c|c|} \hline\n")
 
-        plot_f = open("errorNG.txt", 'w')
-        plot_f.write("$NGSolve$\n")
-        plot_f.write("$n_\\text{dof}$\n")
-        plot_f.write("$\\norm{u - u_h}_{L^\\infty}$\n")
-        plot_f.write("{}\n".format(len(self.table_list)))
+        plot_max = open("maxerrorNG.txt", 'w')
+        plot_max.write("$NGSolve$\n")
+        plot_max.write("$n_\\text{dof}$\n")
+        plot_max.write("$\\left\\|u - u_h\\right\\| _{L^\\infty}$\n")
+        plot_max.write("{}\n".format(len(self.table_list)))
+        
+        plot_p1 = open("errorP1_NG.txt", 'w')
+        plot_p1.write("$NGSolve$\n")
+        plot_p1.write("$n_\\text{dof}$\n")
+        plot_p1.write("$\\left\\|u(x_1) - u_h(x_1)\\right\\| $\n")
+        plot_p1.write("{}\n".format(len(self.table_list)))
 
-        f.write("\t\t\tcycle & \# cells & \# dofs & $\\norm{u - u_h}_{L^\\infty}$ & $\dfrac{\\norm{u - u_h}_{L^\\infty}}{\\norm{u}_{L^\\infty}}$\\\ \hline\n")
-        for cycle, cells, dofs, error, relative_error in self.table_list:
-            f.write("\t\t\t{} & {} & {} & {:.3e} & {:.3e}\\\ \hline\n".format(cycle, cells, dofs, error, relative_error))
-            plot_f.write("{} {}\n".format(dofs, error))
+        plot_p2 = open("errorP2_NG.txt", 'w')
+        plot_p2.write("$NGSolve$\n")
+        plot_p2.write("$n_\\text{dof}$\n")
+        plot_p2.write("$\\left\\|u(x_2) - u_h(x_2)\\right\\| $\n")
+        plot_p2.write("{}\n".format(len(self.table_list)))
+        
+        plot_p3 = open("errorP3_NG.txt", 'w')
+        plot_p3.write("$NGSolve$\n")
+        plot_p3.write("$n_\\text{dof}$\n")
+        plot_p3.write("$\\left\\|u(x_3) - u_h(x_3)\\right\\| $\n")
+        plot_p3.write("{}\n".format(len(self.table_list)))
 
+        f.write("\t\t\tcycle & \# cells & \# dofs & $\\left\\|u - u_h\\right\\| _{L^\\infty}$ & $\dfrac{\\left\\|u - u_h\\right\\| _{L^\\infty}}{\\left\\|u - u_h\\right\\| _{L^\\infty}}$\\\ \hline\n")
+        for cycle, cells, dofs, l2error, l2relative_error, maxerror, mexrelative_error, error_p1, error_p2, error_p3 in self.table_list:
+            f.write("\t\t\t{} & {} & {} & {:.3e} & {:.3e}\\\ \hline\n".format(cycle, cells, dofs, maxerror, mexrelative_error))
+            plot_max.write("{} {}\n".format(dofs, maxerror))
+            plot_p1.write("{} {}\n".format(dofs, error_p1))
+            plot_p2.write("{} {}\n".format(dofs, error_p2))
+            plot_p3.write("{} {}\n".format(dofs, error_p3))
+            
 
         f.write("\t\t\end{tabular}\n")
         f.write("\t\end{center}\n")
         f.write("\\end{table}")
         f.close()
-        plot_f.close()
+        plot_max.close()
+        plot_p1.close()
+        plot_p2.close()
+        plot_p3.close()
 
 
     def do(self):
@@ -232,7 +266,7 @@ class Problem:
 
             self.calculate_error()
 
-            print(self.fes.ndof)
+            print("ndof: {}".format(self.fes.ndof))
             cycle += 1
             
         self.output()
