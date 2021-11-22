@@ -2,13 +2,12 @@
 //This is a general MFEM program designed to solve Laplace-equations using the MFEM Library.
 //The dimensionality of the programm can be changed by altering the input grid.
 
-#include"mfem.hpp"
+#include "mfem.hpp"
 
 #include <vector>
 #include <fstream>
 #include <iostream>
 #include <math.h>
-
 
 using namespace std;
 using namespace mfem;
@@ -17,11 +16,14 @@ using namespace mfem;
 double bdr_func(const Vector &p);
 double rhs_func(const Vector &p);
 
+//--------------------------------------------------------------
+//Class for evaluating the approximate solution at a given point. Only applicable if the point is a node of the grid.
+//--------------------------------------------------------------
 class PointValueEvaluation
 {
 public:
    PointValueEvaluation(const vector<double> &evaluation_point);
-   double operator()(GridFunction &x,  Mesh &mesh) const;
+   double operator()(GridFunction &x, Mesh &mesh) const;
 
 private:
    const vector<double> evaluation_point;
@@ -42,29 +44,27 @@ double PointValueEvaluation::operator()(GridFunction &x, Mesh &mesh) const
       int nv = e->GetNVertices();
       const IntegrationRule &ir = *Geometries.GetVertices(e->GetGeometryType());
       x.GetValues(i, ir, vert_vals, vert_coords);
-      for (int j = 0; j < nv; j++) 
+      for (int j = 0; j < nv; j++)
       {
          bool coords_match = true;
-         for (int k = 0; k <evaluation_point.size(); k++)
+         for (int k = 0; k < evaluation_point.size(); k++)
          {
-            if (evaluation_point[k] != vert_coords(k,j)) 
+            if (evaluation_point[k] != vert_coords(k, j))
             {
                coords_match = false;
                break;
             }
          }
 
-         if(coords_match)
+         if (coords_match)
          {
             return vert_vals(j);
          }
- 
       }
    }
 
-   return 1e20; 
+   return 1e20;
 }
-
 
 //Metrics to be collected for later graphing.
 typedef struct error_values
@@ -81,12 +81,14 @@ typedef struct error_values
 
 //----------------------------------------------------------------
 //Class for the specification of the problem
+//Initialized with the hysteresis (Factor for derefinement), the max element error used for Refinement, the order of elements to be used,
+//and the three postprocessors required to calculate the pointwise error.
 //----------------------------------------------------------------
 class Problem
 {
 public:
    Problem() : hysteresis(0.2), max_elem_error(1.0e-10), order(2),
-                     postprocessor1({0.125,0.125,0.125}), postprocessor2({0.25,0.25,0.25}), postprocessor3({0.5,0.5,0.5})
+               postprocessor1({0.125, 0.125, 0.125}), postprocessor2({0.25, 0.25, 0.25}), postprocessor3({0.5, 0.5, 0.5})
    {
    }
    void run();
@@ -246,7 +248,7 @@ void Problem::run()
    estimator = new KellyErrorEstimator(*integ, x, flux_fes);
 
    ThresholdRefiner refiner(*estimator);
-   refiner.SetTotalErrorFraction(0.0); // use purely local threshold
+   refiner.SetTotalErrorFraction(0.3); // use purely local threshold
    refiner.SetLocalErrorGoal(max_elem_error);
    refiner.PreferConformingRefinement();
    refiner.SetNCLimit(0);
@@ -303,6 +305,7 @@ void Problem::run()
 //----------------------------------------------------------------
 void Problem::exact_error(int cycle, int dofs, GridFunction &x, GridFunction &error_zero, FunctionCoefficient &u)
 {
+   //TODO: add the L2 error calculation.
    error_values values = {};
    values.cycle = cycle;
    values.dofs = dofs;
@@ -310,9 +313,9 @@ void Problem::exact_error(int cycle, int dofs, GridFunction &x, GridFunction &er
    values.error = x.ComputeMaxError(u);
    values.relative_error = values.error / error_zero.ComputeMaxError(u);
 
-   double p1[] = {0.125,0.125,0.125};
-   double p2[] = {0.25,0.25,0.25};
-   double p3[] = {0.5,0.5,0.5};
+   double p1[] = {0.125, 0.125, 0.125};
+   double p2[] = {0.25, 0.25, 0.25};
+   double p3[] = {0.5, 0.5, 0.5};
 
    values.error_p1 = abs(postprocessor1(x, mesh) - bdr_func(Vector(p1, 3)));
    values.error_p2 = abs(postprocessor2(x, mesh) - bdr_func(Vector(p2, 3)));
@@ -328,15 +331,30 @@ void Problem::exact_error(int cycle, int dofs, GridFunction &x, GridFunction &er
 void Problem::output_table()
 {
    std::ofstream output("table.tex");
-   std::ofstream output_custom("error_mfem.txt");
+   std::ofstream output_max("error_mfem.txt");
    std::ofstream output_p1("error_p1.txt");
    std::ofstream output_p2("error_p2.txt");
    std::ofstream output_p3("error_p3.txt");
 
-   output_custom << "MFEM" << endl;
-   output_custom << "$n_\\text{dof}$" << endl;
-   output_custom << "$\\left\\|u - u_h\\right\\| _{L^\\infty}$" << endl;
-   output_custom << table_vector.size() << endl;
+   output_max << "MFEM" << endl;
+   output_max << "$n_\\text{dof}$" << endl;
+   output_max << "$\\left\\|u - u_h\\right\\| _{L^\\infty}$" << endl;
+   output_max << table_vector.size() << endl;
+
+   output_p1 << "MFEM" << endl;
+   output_p1 << "$n_\\text{dof}$" << endl;
+   output_p1 << "$\\left\\|u(x_1) - u_h(x_1)\\right\\| $" << endl;
+   output_p1 << table_vector.size() << endl;
+
+   output_p2 << "MFEM" << endl;
+   output_p2 << "$n_\\text{dof}$" << endl;
+   output_p2 << "$\\left\\|u(x_2) - u_h(x_2)\\right\\| $" << endl;
+   output_p2 << table_vector.size() << endl;
+
+   output_p3 << "MFEM" << endl;
+   output_p3 << "$n_\\text{dof}$" << endl;
+   output_p3 << "$\\left\\|u(x_3) - u_h(x_3)\\right\\| $" << endl;
+   output_p3 << table_vector.size() << endl;
 
    output << "\\begin{table}[h]" << endl;
    output << "\t\\begin{center}" << endl;
@@ -346,13 +364,12 @@ void Problem::output_table()
    for (int i = 0; i < table_vector.size(); i++)
    {
       output << "\t\t\t" << table_vector[i].cycle << " & " << table_vector[i].cells << " & " << table_vector[i].dofs << " & " << setprecision(3) << scientific << table_vector[i].error << " & " << setprecision(3) << scientific << table_vector[i].relative_error << "\\\\ \\hline" << endl;
-      output_custom << table_vector[i].dofs << " " << table_vector[i].error << endl;
+      output_max << table_vector[i].dofs << " " << table_vector[i].error << endl;
       output_p1 << table_vector[i].dofs << " " << table_vector[i].error_p1 << endl;
       output_p2 << table_vector[i].dofs << " " << table_vector[i].error_p2 << endl;
       output_p3 << table_vector[i].dofs << " " << table_vector[i].error_p3 << endl;
    }
 
-   //TODO: Title for point wise error files.
    output << "\t\t\\end{tabular}" << endl;
    output << "\t\\end{center}" << endl;
    output << "\\end{table}" << endl;
@@ -375,35 +392,33 @@ int main(int argc, char *argv[])
    l.run();
 }
 
-
 // Exact solution, used for the Dirichlet BC.
 double bdr_func(const Vector &p)
 {
-   
-   double radius = sqrt((p(0)-0.5)*(p(0)-0.5) + p(1)*p(1));
-   double phi;
-   double alpha = 1.0/2.0;
 
-   if(p(1) < 0)
+   double radius = sqrt((p(0) - 0.5) * (p(0) - 0.5) + p(1) * p(1));
+   double phi;
+   double alpha = 1.0 / 2.0;
+
+   if (p(1) < 0)
    {
-      phi = 2*M_PI+atan2(p(1),p(0)-0.5);
+      phi = 2 * M_PI + atan2(p(1), p(0) - 0.5);
    }
    else
    {
-      phi = atan2(p(1),p(0)-0.5);
+      phi = atan2(p(1), p(0) - 0.5);
    }
 
-   return pow(radius,alpha) * sin(alpha * phi) *  (p(2)*p(2));
+   return pow(radius, alpha) * sin(alpha * phi) * (p(2) * p(2));
 
    /*
    return exp(-10 * (p(0) + p(1))) * (p(2) * p(2));
    */
-  /*
+   /*
    double k = 8.0;
    return sin(k*p(0)) * cos(2*k*p(1)) * exp(p(2)); 
    */
 }
-
 
 // Right hand side function
 double rhs_func(const Vector &p)
@@ -411,9 +426,9 @@ double rhs_func(const Vector &p)
    /*
    return -(200 * (p(2) * p(2)) + 2) * exp(-10 * (p(0) + p(1)));
    */
-  /*
+   /*
    double k = 8.0;
    return (k * k + 4 * k - 1) * sin(k * p(0)) * cos(2 * k * p(1)) * exp(p(2));
    */
-  return -2.0;
+   return -2.0;
 }
