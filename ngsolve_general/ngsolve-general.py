@@ -1,13 +1,16 @@
 """
 Created by Patrik Rác
-Solution of the following problem
--Solving the Laplace on a defined mesh. 
+Program using Netgen/NGSolve for the solution of elliptic PDEs using adaptive mesh refinement.
+ 
 The problem is solved using an adaptivity strategy with an gradient recovery error estimator.
 The adaptivity and Problem geometry can be easily changed without affecting the performance of the programm.
-The programm runns with the command "netgen ngsolve-general.py or python3.8 ngsolve-general.py"
+
+The program runns with the command "netgen ngsolve-general.py" or "python3.8 ngsolve-general.py"
 """
+
 from ngsolve import *
 from netgen.csg import *
+from netgen.geom2d import CSG2d, Rectangle
 
 class Problem:
 
@@ -41,6 +44,8 @@ class Problem:
 
         #Get the Bilinear and Linear form aswell as the solver.
         (self.a, self.f, self.c) = self.setup_system()
+        
+        self.bvp = BVP(bf=self.a, lf=self.f, gf=self.gfu, pre=self.c)
 
 
     def make_mesh(self):
@@ -50,8 +55,10 @@ class Problem:
         """
 
         brick = OrthoBrick(Pnt(0.0,0.0,0.0), Pnt(1.0,1.0,1.0)).bc('bnd')
+        #rect = Rectangle( pmin=(0,0), pmax=(1.0,1.0), bc="bnd" )
 
         geo = CSGeometry()
+        #geo = CSG2d()
         geo.Add (brick)
 
         return Mesh(geo.GenerateMesh(maxh=0.25))
@@ -91,9 +98,9 @@ class Problem:
         #Define the Linear form corresponding to the given problem
         f = LinearForm(self.fes)
         f += -(200*(z*z) + 2)*exp(-10*(x+y))*v*dx
-
+        
         #Define the solver to be used to solve the problem
-        c = Preconditioner(a, "bddc")
+        c = Preconditioner(a, type = "bddc")
 
         return (a,f,c)
     
@@ -130,7 +137,7 @@ class Problem:
 
         self.c.Update()
 
-        solvers.BVP(bf=self.a, lf=self.f, gf=self.gfu, pre=self.c)
+        self.bvp.Do()
 
 
     def output(self):
@@ -141,7 +148,7 @@ class Problem:
         vtk = VTKOutput(ma=self.mesh,
                         coefs=[self.gfu,],
                         names = ["u",],
-                        filename="result",
+                        filename="solution",
                         subdivision=0)
 
 
