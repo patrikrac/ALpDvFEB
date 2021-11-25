@@ -35,12 +35,59 @@ The classes defined here can be modified in order to solve each specific Problem
 #include <deal.II/fe/fe_series.h>
 #include <deal.II/numerics/smoothness_estimator.h>
 
+#include <deal.II/multigrid/mg_constrained_dofs.h>
+#include <deal.II/multigrid/multigrid.h>
+#include <deal.II/multigrid/mg_transfer.h>
+#include <deal.II/multigrid/mg_tools.h>
+#include <deal.II/multigrid/mg_coarse.h>
+#include <deal.II/multigrid/mg_smoother.h>
+#include <deal.II/multigrid/mg_matrix.h>
+#include <deal.II/meshworker/mesh_loop.h>
+
 #include <fstream>
 #include <iostream>
 #include <vector>
 #include <math.h>
 
 using namespace dealii;
+
+template <int dim>
+struct ScratchData
+{
+    ScratchData(const Mapping<dim> &mapping,
+                const FiniteElement<dim> &fe,
+                const unsigned int quadrature_degree,
+                const UpdateFlags update_flags)
+        : fe_values(mapping, fe, QGauss<dim>(quadrature_degree), update_flags)
+    {
+    }
+    ScratchData(const ScratchData<dim> &scratch_data)
+        : fe_values(scratch_data.fe_values.get_mapping(),
+                    scratch_data.fe_values.get_fe(),
+                    scratch_data.fe_values.get_quadrature(),
+                    scratch_data.fe_values.get_update_flags())
+    {
+    }
+    FEValues<dim> fe_values;
+};
+
+struct CopyData
+{
+    unsigned int level;
+    FullMatrix<double> cell_matrix;
+    Vector<double> cell_rhs;
+    std::vector<types::global_dof_index> local_dof_indices;
+
+    template <class Iterator>
+    void reinit(const Iterator &cell, unsigned int dofs_per_cell)
+    {
+        cell_matrix.reinit(dofs_per_cell, dofs_per_cell);
+        cell_rhs.reinit(dofs_per_cell);
+        local_dof_indices.resize(dofs_per_cell);
+        cell->get_active_or_mg_dof_indices(local_dof_indices);
+        level = cell->level();
+    }
+};
 
 //----------------------------------------------------------------
 //Class used to evaluate the approx. solution at a given point (If node exists).
@@ -106,7 +153,7 @@ template <int dim>
 double BoundaryValues<dim>::value(const Point<dim> &p, const unsigned int /*component*/) const
 {
     //Formulate the boundary function
-    
+
     /*
     //Problem with singularity 
     double alpha = 1.0/2.0;
@@ -124,11 +171,9 @@ double BoundaryValues<dim>::value(const Point<dim> &p, const unsigned int /*comp
     return pow(radius, alpha) * sin(alpha * phi) * (p(2)*p(2));
     */
 
-    
-   //Problem using the highly oszilating function
-   double k = 8.0;
-   return sin(k*p(0)) * cos(2*k*p(1)) * exp(p(2));
-   
+    //Problem using the highly oszilating function
+    double k = 8.0;
+    return sin(k * p(0)) * cos(2 * k * p(1)) * exp(p(2));
 
     /*
     //Problem using the exponential function
@@ -155,12 +200,10 @@ double RHS_function<dim>::value(const Point<dim> &p, const unsigned int /*compon
     return -2.0;
     */
 
-    
     double k = 8.0;
     return (k * k + 4 * k - 1) * sin(k * p(0)) * cos(2 * k * p(1)) * exp(p(2));
-    
 
-   /*
+    /*
     return -(200 * (p(2) * p(2)) + 2) * exp(-10 * (p(0) + p(1)));
     */
 }
@@ -179,7 +222,7 @@ template <int dim>
 double Solution<dim>::value(const Point<dim> &p, const unsigned int /*component*/) const
 {
     //Formulate the boundary function
-    
+
     /*
     //Problem with singularity 
     double alpha = 1.0/2.0;
@@ -197,11 +240,10 @@ double Solution<dim>::value(const Point<dim> &p, const unsigned int /*component*
     return pow(radius, alpha) * sin(alpha * phi) * (p(2)*p(2));
     */
 
-    
-   //Problem using the highly oszilating function
-   double k = 8.0;
-   return sin(k*p(0)) * cos(2*k*p(1)) * exp(p(2));
-   
+    //Problem using the highly oszilating function
+    double k = 8.0;
+    return sin(k * p(0)) * cos(2 * k * p(1)) * exp(p(2));
+
     /*
     //Problem using the exponential function
     return exp(-10 * (p(0) + p(1))) * (p(2) * p(2));
@@ -579,13 +621,17 @@ template <int dim>
 class Problem
 {
 public:
-    Problem();
+    Problem(const unsigned int degree);
     void run();
 
 private:
+    template <class Iterator>
+    void cell_worker(const Iterator &cell, ScratchData<dim> &scratch_data, CopyData &copy_data);
+
     void make_grid();
     void setup_system();
     void assemble_system();
+    void assemble_multigrid();
     int get_n_dof();
     void solve();
     void refine_grid();
@@ -609,6 +655,14 @@ private:
     PointValueEvaluation<dim> postprocessor2;
     PointValueEvaluation<dim> postprocessor3;
     std::vector<metrics> convergence_vector;
+
+    const unsigned int degree;
+
+    MGLevelObject<SparsityPattern> mg_sparsity_patterns;
+    MGLevelObject<SparsityPattern> mg_interface_sparsity_patterns;
+    MGLevelObject<SparseMatrix<double>> mg_matrices;
+    MGLevelObject<SparseMatrix<double>> mg_interface_matrices;
+    MGConstrainedDoFs mg_constrained_dofs;
 };
 
 //------------------------------
@@ -616,7 +670,11 @@ private:
 //The dof_handler manages enumeration and indexing of all degrees of freedom (relating to the given triangulation)
 //------------------------------
 template <int dim>
-Problem<dim>::Problem() : fe(2), dof_handler(triangulation), postprocessor1(Point<dim>(0.125, 0.125, 0.125)), postprocessor2(Point<dim>(0.25, 0.25, 0.25)), postprocessor3(Point<dim>(0.5, 0.5, 0.5))
+Problem<dim>::Problem(const unsigned int degree) : triangulation(Triangulation<dim>::limit_level_difference_at_vertices),
+                                                   fe(degree),
+                                                   dof_handler(triangulation),
+                                                   degree(degree),
+                                                   postprocessor1(Point<dim>(0.125, 0.125, 0.125)), postprocessor2(Point<dim>(0.25, 0.25, 0.25)), postprocessor3(Point<dim>(0.5, 0.5, 0.5))
 {
 }
 
@@ -644,6 +702,7 @@ template <int dim>
 void Problem<dim>::setup_system()
 {
     dof_handler.distribute_dofs(fe);
+    dof_handler.distribute_mg_dofs();
     //std::cout << "Number of degrees of freedom: " << dof_handler.n_dofs() << std::endl;
 
     solution.reinit(dof_handler.n_dofs());
@@ -661,6 +720,121 @@ void Problem<dim>::setup_system()
     sparsity_pattern.copy_from(dsp);
 
     system_matrix.reinit(sparsity_pattern);
+
+    mg_constrained_dofs.clear();
+    mg_constrained_dofs.initialize(dof_handler);
+
+    const std::set<types::boundary_id> boundary_ids = {0};
+    mg_constrained_dofs.make_zero_boundary_constraints(dof_handler, boundary_ids);
+
+    const unsigned int n_levels = triangulation.n_levels();
+    mg_interface_matrices.resize(0, n_levels - 1);
+    mg_matrices.resize(0, n_levels - 1);
+    mg_sparsity_patterns.resize(0, n_levels - 1);
+    mg_interface_sparsity_patterns.resize(0, n_levels - 1);
+
+    for (unsigned int level = 0; level < n_levels; ++level)
+    {
+        {
+            DynamicSparsityPattern dsp(dof_handler.n_dofs(level),
+                                       dof_handler.n_dofs(level));
+            MGTools::make_sparsity_pattern(dof_handler, dsp, level);
+            mg_sparsity_patterns[level].copy_from(dsp);
+            mg_matrices[level].reinit(mg_sparsity_patterns[level]);
+        }
+        {
+            DynamicSparsityPattern dsp(dof_handler.n_dofs(level),
+                                       dof_handler.n_dofs(level));
+            MGTools::make_interface_sparsity_pattern(dof_handler,
+                                                     mg_constrained_dofs,
+                                                     dsp,
+                                                     level);
+            mg_interface_sparsity_patterns[level].copy_from(dsp);
+            mg_interface_matrices[level].reinit(
+                mg_interface_sparsity_patterns[level]);
+        }
+    }
+}
+
+//------------------------------
+//Helper class to enable multigrid
+//------------------------------
+template <int dim>
+template <class Iterator>
+void Problem<dim>::cell_worker(const Iterator &cell, ScratchData<dim> &scratch_data, CopyData &copy_data)
+{
+    FEValues<dim> &fe_values = scratch_data.fe_values;
+    fe_values.reinit(cell);
+
+    RHS_function<dim> rhs;
+
+    const unsigned int dofs_per_cell = fe_values.get_fe().n_dofs_per_cell();
+    const unsigned int n_q_points = fe_values.get_quadrature().size();
+    copy_data.reinit(cell, dofs_per_cell);
+    const std::vector<double> &JxW = fe_values.get_JxW_values();
+    for (unsigned int q = 0; q < n_q_points; ++q)
+    {
+        for (unsigned int i = 0; i < dofs_per_cell; ++i)
+        {
+            for (unsigned int j = 0; j < dofs_per_cell; ++j)
+            {
+                copy_data.cell_matrix(i, j) +=
+                    (fe_values.shape_grad(i, q) * // grad phi_i(x_q)
+                     fe_values.shape_grad(j, q) * // grad phi_j(x_q)
+                     JxW[q]);                     //dx
+            }
+            copy_data.cell_rhs(i) += (fe_values.shape_value(i, q) *              // phi_i(x_q)
+                                      rhs.value(fe_values.quadrature_point(q)) * // f(x_q)
+                                      JxW[q]);
+        }
+    }
+}
+
+template <int dim>
+void Problem<dim>::assemble_multigrid()
+{
+    MappingQ1<dim> mapping;
+    const unsigned int n_levels = triangulation.n_levels();
+    std::vector<AffineConstraints<double>> boundary_constraints(n_levels);
+    for (unsigned int level = 0; level < n_levels; ++level)
+    {
+        IndexSet dofset;
+        DoFTools::extract_locally_relevant_level_dofs(dof_handler, level, dofset);
+        boundary_constraints[level].reinit(dofset);
+        boundary_constraints[level].add_lines(mg_constrained_dofs.get_refinement_edge_indices(level));
+        boundary_constraints[level].add_lines(mg_constrained_dofs.get_boundary_indices(level));
+        boundary_constraints[level].close();
+    }
+    auto cell_worker =
+        [&](const typename DoFHandler<dim>::level_cell_iterator &cell,
+            ScratchData<dim> &scratch_data,
+            CopyData &copy_data)
+    {
+        this->cell_worker(cell, scratch_data, copy_data);
+    };
+    auto copier = [&](const CopyData &cd)
+    {
+        boundary_constraints[cd.level].distribute_local_to_global(cd.cell_matrix, cd.local_dof_indices, mg_matrices[cd.level]);
+        const unsigned int dofs_per_cell = cd.local_dof_indices.size();
+
+        for (unsigned int i = 0; i < dofs_per_cell; ++i)
+            for (unsigned int j = 0; j < dofs_per_cell; ++j)
+                if (mg_constrained_dofs.is_interface_matrix_entry(cd.level, cd.local_dof_indices[i], cd.local_dof_indices[j]))
+                {
+                    mg_interface_matrices[cd.level].add(cd.local_dof_indices[i], cd.local_dof_indices[j], cd.cell_matrix(i, j));
+                }
+    };
+
+    const unsigned int n_gauss_points = degree + 1;
+    ScratchData<dim> scratch_data(mapping, fe, n_gauss_points,
+                                  update_values | update_gradients | update_JxW_values | update_quadrature_points);
+    MeshWorker::mesh_loop(dof_handler.begin_mg(),
+                          dof_handler.end_mg(),
+                          cell_worker,
+                          copier,
+                          scratch_data,
+                          CopyData(),
+                          MeshWorker::assemble_own_cells);
 }
 
 //------------------------------
@@ -669,49 +843,38 @@ void Problem<dim>::setup_system()
 template <int dim>
 void Problem<dim>::assemble_system()
 {
-    QGauss<dim> quadrature_formula(fe.degree + 1);
-    FEValues<dim> fe_values(fe,
-                            quadrature_formula,
-                            update_values | update_gradients | update_quadrature_points | update_JxW_values);
+    MappingQ1<dim> mapping;
 
-    const unsigned int dofs_per_cell = fe.n_dofs_per_cell();
-
-    RHS_function<dim> rhs;
-
-    FullMatrix<double> cell_matrix(dofs_per_cell, dofs_per_cell);
-    Vector<double> cell_rhs(dofs_per_cell);
-
-    std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
-
-    for (const auto &cell : dof_handler.active_cell_iterators())
+    auto cell_worker =
+        [&](const typename DoFHandler<dim>::active_cell_iterator &cell,
+            ScratchData<dim> &scratch_data,
+            CopyData &copy_data)
     {
-        fe_values.reinit(cell);
-        cell_matrix = 0;
-        cell_rhs = 0;
+        this->cell_worker(cell, scratch_data, copy_data);
+    };
 
-        for (const unsigned int q_index : fe_values.quadrature_point_indices())
-        {
+    auto copier = [&](const CopyData &cd)
+    {
+        this->constraints.distribute_local_to_global(cd.cell_matrix,
+                                                     cd.cell_rhs,
+                                                     cd.local_dof_indices,
+                                                     system_matrix,
+                                                     system_rhs);
+    };
 
-            const auto &x_q = fe_values.quadrature_point(q_index);
+    const unsigned int n_gauss_points = degree + 1;
+    ScratchData<dim> scratch_data(mapping,
+                                  fe,
+                                  n_gauss_points,
+                                  update_values | update_gradients | update_JxW_values | update_quadrature_points);
 
-            for (const unsigned int i : fe_values.dof_indices())
-            {
-                for (const unsigned int j : fe_values.dof_indices())
-                    cell_matrix(i, j) +=
-                        (fe_values.shape_grad(i, q_index) * // grad phi_i(x_q)
-                         fe_values.shape_grad(j, q_index) * // grad phi_j(x_q)
-                         fe_values.JxW(q_index));           //dx
-
-                cell_rhs(i) += (fe_values.shape_value(i, q_index) * // phi_i(x_q)
-                                rhs.value(x_q) *                    // f(x_q)
-                                fe_values.JxW(q_index));            // dx
-            }
-        }
-
-        //Now add the calculated local matrix to the global sparse matrix
-        cell->get_dof_indices(local_dof_indices);
-        constraints.distribute_local_to_global(cell_matrix, cell_rhs, local_dof_indices, system_matrix, system_rhs);
-    }
+    MeshWorker::mesh_loop(dof_handler.begin_active(),
+                          dof_handler.end(),
+                          cell_worker,
+                          copier,
+                          scratch_data,
+                          CopyData(),
+                          MeshWorker::assemble_own_cells);
 }
 
 //------------------------------
@@ -729,12 +892,33 @@ int Problem<dim>::get_n_dof()
 template <int dim>
 void Problem<dim>::solve()
 {
+    MGTransferPrebuilt<Vector<double>> mg_transfer(mg_constrained_dofs);
+    mg_transfer.build(dof_handler);
+
+    FullMatrix<double> coarse_matrix;
+    coarse_matrix.copy_from(mg_matrices[0]);
+    MGCoarseGridHouseholder<double, Vector<double>> coarse_grid_solver;
+    coarse_grid_solver.initialize(coarse_matrix);
+
+    using Smoother = PreconditionSOR<SparseMatrix<double>>;
+    mg::SmootherRelaxation<Smoother, Vector<double>> mg_smoother;
+    mg_smoother.initialize(mg_matrices);
+    mg_smoother.set_steps(2);
+    mg_smoother.set_symmetric(true);
+
+    mg::Matrix<Vector<double>> mg_matrix(mg_matrices);
+    mg::Matrix<Vector<double>> mg_interface_up(mg_interface_matrices);
+    mg::Matrix<Vector<double>> mg_interface_down(mg_interface_matrices);
+    Multigrid<Vector<double>> mg(mg_matrix, coarse_grid_solver, mg_transfer, mg_smoother, mg_smoother);
+
+    mg.set_edge_matrices(mg_interface_down, mg_interface_up);
+
+    PreconditionMG<dim, Vector<double>, MGTransferPrebuilt<Vector<double>>> preconditioner(dof_handler, mg, mg_transfer);
+
     SolverControl solver_control(1000, 1e-12);
     SolverCG<Vector<double>> solver(solver_control);
 
-    PreconditionSSOR<SparseMatrix<double>> preconditioner;
-    preconditioner.initialize(system_matrix, 1.2);
-
+    solution = 0;
     solver.solve(system_matrix, solution, system_rhs, preconditioner);
 
     constraints.distribute(solution);
@@ -927,11 +1111,11 @@ void Problem<dim>::run()
         }
         setup_system();
         assemble_system();
+        assemble_multigrid();
         solve();
 
         calculate_exact_error(cycle);
 
-        //Netgen similar condition to reach desired number of degrees of freedom
         if (get_n_dof() > 100000)
         {
             break;
@@ -945,7 +1129,7 @@ void Problem<dim>::run()
 
 int main(int argc, char **argv)
 {
-    Problem<3> l;
+    Problem<3> l(2);
     l.run();
     return 0;
 }
