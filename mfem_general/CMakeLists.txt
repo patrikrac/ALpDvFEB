@@ -4,6 +4,8 @@ set(CMAKE_CXX_STANDARD 11)
 
 project(mfem_general)
 
+add_compile_definitions(MFEM_USE_MPI)
+
 #find_library(mfem_LIBRARY mfem REQUIRED)
 #find_path(mfem_INCLUDE_DIR NAMES mfem.hpp REQUIRED)
 message(STATUS "Looking for mfem ...")
@@ -19,6 +21,10 @@ enable_language(C)
 enable_language(CXX)
 
 add_executable(mfem_general mfem_general.cpp)
+
+find_package(MPI REQUIRED)
+message(STATUS "Run: ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_MAX_NUMPROCS} ${MPIEXEC_PREFLAGS} EXECUTABLE ${MPIEXEC_POSTFLAGS} ARGS")
+target_link_libraries(mfem_general PRIVATE MPI::MPI_CXX)
 
 target_include_directories(mfem_general PRIVATE ${MFEM_INCLUDE_DIRS})
 target_link_libraries(mfem_general PRIVATE ${MFEM_LIBRARIES})

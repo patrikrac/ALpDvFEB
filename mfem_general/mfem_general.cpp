@@ -388,8 +388,16 @@ void Problem::vtk_output(GridFunction &x)
 
 int main(int argc, char *argv[])
 {
+   int num_procs, myid;
+   MPI_Init(&argc, &argv);
+   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+
    Problem l;
    l.run();
+
+   MPI_Finalize();
+   return 0;
 }
 
 // Exact solution, used for the Dirichlet BC.
