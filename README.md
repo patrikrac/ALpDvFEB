@@ -6,7 +6,8 @@ The used libraries include
 - Netgen/NGSolve
   - For more information and installation instructions visit <https://ngsolve.org>
 - MFEM
-  - For more information and installation instructions visit <https://mfem.org>
+  - For more information and installation instructions visit <https://mfem.org> and <https://mfem.org/howto/build-systems/> for instructions on how to build using cmake
+  - The parallel build of MFEM will require additional libraries
 
 The programms build the bases to solve PDEs using an adaptive mesh refinement loop (and in some cases hp-adaptive elements).
 
