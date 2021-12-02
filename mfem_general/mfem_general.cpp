@@ -87,8 +87,10 @@ typedef struct error_values
 class Problem
 {
 public:
-   Problem() : hysteresis(0.2), max_elem_error(1.0e-10), order(2),
-               postprocessor1({0.125, 0.125, 0.125}), postprocessor2({0.25, 0.25, 0.25}), postprocessor3({0.5, 0.5, 0.5})
+   Problem(int num_procs, int myid) : num_procs(num_procs), myid(myid),
+                                      max_dofs(1000000), reorder_mesh(0), nc_simplices(true),
+                                      hysteresis(0.2), max_elem_error(1.0e-10), order(2),
+                                      postprocessor1({0.125, 0.125, 0.125}), postprocessor2({0.25, 0.25, 0.25}), postprocessor3({0.5, 0.5, 0.5})
    {
    }
    void run();
@@ -96,43 +98,78 @@ public:
 private:
    void make_mesh();
 
-   void update(BilinearForm &a, LinearForm &f, FiniteElementSpace &fespace, GridFunction &x, GridFunction &error_zero);
-   void solve(BilinearForm &a, LinearForm &f, FiniteElementSpace &fespace, GridFunction &x, Array<int> &ess_bdr, FunctionCoefficient &bdr);
-   bool refine(BilinearForm &a, LinearForm &f, FiniteElementSpace &fespace, GridFunction &x, GridFunction &error_zero, ThresholdRefiner &refiner);
+   void update(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace &fespace, ParGridFunction &x, ParGridFunction &error_zero);
+   void solve(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace &fespace, ParGridFunction &x, Array<int> &ess_bdr, FunctionCoefficient &bdr);
+   bool refine(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace &fespace, ParGridFunction &x, ParGridFunction &error_zero, ThresholdRefiner &refiner);
 
-   void exact_error(int cycle, int dofs, GridFunction &x, GridFunction &error_zero, FunctionCoefficient &u);
+   //void exact_error(int cycle, int dofs, ParGridFunction &x, ParGridFunction &error_zero, FunctionCoefficient &u);
 
    void output_table();
-   void glvis_output(GridFunction &x);
-   void vtk_output(GridFunction &x);
+   void vtk_output(ParGridFunction &x);
 
    //Configuration parameters
-   double hysteresis; //derefinement safety coefficient
+
+   //Derefinement safety coefficient
+   double hysteresis;
    double max_elem_error;
    int order;
    PointValueEvaluation postprocessor1, postprocessor2, postprocessor3;
+   int max_dofs;
 
    //Data parameters
-   Mesh mesh;
+   ParMesh *pmesh = nullptr;
    vector<error_values> table_vector;
+
+   //Parallel Parameters
+   //Reorder elements
+   int reorder_mesh;
+   bool nc_simplices;
+
+   //MPI
+   int num_procs;
+   int myid;
 };
 
 //----------------------------------------------------------------
-//Create the mesh the problem will be solved on
+//Create the parallel mesh the problem will be solved on
 //----------------------------------------------------------------
 void Problem::make_mesh()
 {
    const char *mesh_file = "../unit_cube.mesh";
-   mesh = Mesh::LoadFromFile(mesh_file);
+   Mesh mesh(mesh_file);
    for (int i = 0; i < 3; i++)
    {
       mesh.UniformRefinement();
    }
 
    //Turns the Quad mesh (which supports hanging nodes) to a tetrahedral mesh without hanging nodes
-   mesh = Mesh::MakeSimplicial(mesh);
+   if (!nc_simplices)
+   {
+      mesh = Mesh::MakeSimplicial(mesh);
+   }
 
    mesh.Finalize(true);
+
+   if (reorder_mesh)
+   {
+      Array<int> ordering;
+      switch (reorder_mesh)
+      {
+      case 1:
+         mesh.GetHilbertElementOrdering(ordering);
+         break;
+      case 2:
+         mesh.GetGeckoElementOrdering(ordering);
+         break;
+      default:
+         MFEM_ABORT("Unknown mesh reodering type " << reorder_mesh);
+      }
+      mesh.ReorderElements(ordering);
+   }
+
+   mesh.EnsureNCMesh(nc_simplices);
+
+   pmesh = new ParMesh(MPI_COMM_WORLD, mesh);
 
    cout << "Mesh generated." << endl;
 }
@@ -140,7 +177,7 @@ void Problem::make_mesh()
 //----------------------------------------------------------------
 //Update all variables to adabt to the recently adapted mesh
 //----------------------------------------------------------------
-void Problem::update(BilinearForm &a, LinearForm &f, FiniteElementSpace &fespace, GridFunction &x, GridFunction &error_zero)
+void Problem::update(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace &fespace, ParGridFunction &x, ParGridFunction &error_zero)
 {
    fespace.Update();
 
@@ -148,6 +185,14 @@ void Problem::update(BilinearForm &a, LinearForm &f, FiniteElementSpace &fespace
 
    error_zero.Update();
    error_zero = 0.0;
+
+   if (pmesh->Nonconforming())
+   {
+      pmesh->Rebalance();
+
+      fespace.Update();
+      x.Update();
+   }
 
    fespace.UpdatesFinished();
 
@@ -159,25 +204,34 @@ void Problem::update(BilinearForm &a, LinearForm &f, FiniteElementSpace &fespace
 //----------------------------------------------------------------
 //Solve the Problem on the current mesh
 //----------------------------------------------------------------
-void Problem::solve(BilinearForm &a, LinearForm &f, FiniteElementSpace &fespace, GridFunction &x, Array<int> &ess_bdr, FunctionCoefficient &bdr)
+void Problem::solve(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace &fespace, ParGridFunction &x, Array<int> &ess_bdr, FunctionCoefficient &bdr)
 {
-   a.Assemble();
-   f.Assemble();
-
-   // Project the exact solution to the essential boundary DOFs.
-   x.ProjectBdrCoefficient(bdr, ess_bdr);
-
-   //Create and solve the linear system.
    Array<int> ess_tdof_list;
    fespace.GetEssentialTrueDofs(ess_bdr, ess_tdof_list);
+   f.Assemble();
 
-   SparseMatrix A;
+   a.Assemble();
+
+   OperatorPtr A;
    Vector B, X;
 
-   a.FormLinearSystem(ess_tdof_list, x, f, A, X, B);
+   const int copy_interior = 1;
+   a.FormLinearSystem(ess_tdof_list, x, f, A, X, B, copy_interior);
 
-   GSSmoother M(A);
-   PCG(A, M, B, X, 0, 500, 1e-12, 0.0);
+   Solver *M = NULL;
+
+   HypreBoomerAMG *amg = new HypreBoomerAMG;
+   amg->SetPrintLevel(0);
+   M = amg;
+
+   CGSolver cg(MPI_COMM_WORLD);
+   cg.SetRelTol(1e-6);
+   cg.SetMaxIter(2000);
+   cg.SetPrintLevel(3);
+   cg.SetPreconditioner(*M);
+   cg.SetOperator(*A);
+   cg.Mult(B, X);
+   delete M;
 
    a.RecoverFEMSolution(X, f, x);
 }
@@ -185,9 +239,9 @@ void Problem::solve(BilinearForm &a, LinearForm &f, FiniteElementSpace &fespace,
 //----------------------------------------------------------------
 //Execute one refinement step and call the update funciton to adapt the other variables
 //----------------------------------------------------------------
-bool Problem::refine(BilinearForm &a, LinearForm &f, FiniteElementSpace &fespace, GridFunction &x, GridFunction &error_zero, ThresholdRefiner &refiner)
+bool Problem::refine(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace &fespace, ParGridFunction &x, ParGridFunction &error_zero, ThresholdRefiner &refiner)
 {
-   refiner.Apply(mesh);
+   refiner.Apply(*pmesh);
 
    if (refiner.Stop())
    {
@@ -210,25 +264,28 @@ void Problem::run()
    make_mesh();
 
    //Declaration
-   int dim = mesh.Dimension();
-   int sdim = mesh.SpaceDimension();
+   int dim = pmesh->Dimension();
+   int sdim = pmesh->SpaceDimension();
+
+   MFEM_VERIFY(pmesh->bdr_attributes.Size() > 0,
+               "Boundary attributes required in the mesh.");
 
    //Setup the necessary spaces and solutions for the problem
    H1_FECollection fec(order, dim);
-   FiniteElementSpace fespace(&mesh, &fec);
+   ParFiniteElementSpace fespace(pmesh, &fec);
 
-   BilinearForm a(&fespace);
-   LinearForm f(&fespace);
+   ParBilinearForm a(&fespace);
+   ParLinearForm f(&fespace);
 
-   GridFunction x(&fespace);
+   ParGridFunction x(&fespace);
 
    //Grid function for calculation of the relative norm
-   GridFunction error_zero(&fespace);
+   ParGridFunction error_zero(&fespace);
    error_zero = 0.0;
 
    FunctionCoefficient u(bdr_func);
 
-   Array<int> ess_bdr(mesh.bdr_attributes.Max());
+   Array<int> ess_bdr(pmesh->bdr_attributes.Max());
    ess_bdr = 1;
 
    //Setup
@@ -244,7 +301,7 @@ void Problem::run()
    KellyErrorEstimator *estimator{nullptr};
    L2_FECollection flux_fec(order, dim);
 
-   auto flux_fes = new FiniteElementSpace(&mesh, &flux_fec, sdim);
+   auto flux_fes = new FiniteElementSpace(pmesh, &flux_fec, sdim);
    estimator = new KellyErrorEstimator(*integ, x, flux_fes);
 
    ThresholdRefiner refiner(*estimator);
@@ -253,53 +310,45 @@ void Problem::run()
    refiner.PreferConformingRefinement();
    refiner.SetNCLimit(0);
 
-   ThresholdDerefiner derefiner(*estimator);
-   derefiner.SetThreshold(hysteresis * max_elem_error);
-   derefiner.SetNCLimit(0);
-
    x = 0.0;
 
    refiner.Reset();
-   derefiner.Reset();
 
-   int step = 0;
+   int iter = 0;
    while (true)
    {
+      HYPRE_BigInt global_dofs = fespace.GlobalTrueVSize();
 
-      cout << "Step: " << step << endl
-           << "DOF: " << fespace.GetNDofs() << endl;
+      if (myid == 0)
+      {
+         cout << "Iteration: " << iter << endl
+              << "DOFs: " << global_dofs << endl;
+      }
 
       solve(a, f, fespace, x, ess_bdr, bdr);
 
-      exact_error(step, fespace.GetNDofs(), x, error_zero, u);
+      //exact_error(iter, fespace.GetNDofs(), x, error_zero, u);
 
       //Stop the loop if no more elements are marked for refinement or the desired number of DOFs is reached.
-      if (!refine(a, f, fespace, x, error_zero, refiner) || fespace.GetNDofs() > 100000)
+      if ( global_dofs >= max_dofs || !refine(a, f, fespace, x, error_zero, refiner))
       {
+         if (myid == 0)
+         {
+            cout << "Stopping criterion satisfied. Stop." << endl;
+         }
          break;
       }
-      step++;
+      iter++;
    }
-
-   if (derefiner.Apply(mesh))
-   {
-      cout << "\nDerefined elements." << endl;
-
-      update(a, f, fespace, x, error_zero);
-   }
-
-   cout << "Final: " << step << endl
-        << "DOF: " << fespace.GetNDofs() << endl;
-
-   a.Update();
-   f.Update();
 
    delete estimator;
+   delete pmesh;
 
    vtk_output(x);
    output_table();
 }
 
+/*
 //----------------------------------------------------------------
 //Calculate the exact error
 //----------------------------------------------------------------
@@ -374,28 +423,31 @@ void Problem::output_table()
    output << "\t\\end{center}" << endl;
    output << "\\end{table}" << endl;
 }
+*/
 
 //----------------------------------------------------------------
 //Create a vtk Output for the current solution
 //----------------------------------------------------------------
-void Problem::vtk_output(GridFunction &x)
+void Problem::vtk_output(ParGridFunction &x)
 {
    std::ofstream output("solution.vtk");
 
-   mesh.PrintVTK(output, 0);
+   pmesh->PrintVTK(output, 0);
    x.SaveVTK(output, "u", 0);
 }
 
 int main(int argc, char *argv[])
 {
+   // Initialize MPI
    int num_procs, myid;
    MPI_Init(&argc, &argv);
    MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
    MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 
-   Problem l;
+   Problem l(num_procs, myid);
    l.run();
 
+   //Finalize MPI
    MPI_Finalize();
    return 0;
 }
