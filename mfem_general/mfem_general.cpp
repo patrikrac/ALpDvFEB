@@ -104,7 +104,7 @@ private:
 
    //void exact_error(int cycle, int dofs, ParGridFunction &x, ParGridFunction &error_zero, FunctionCoefficient &u);
 
-   void output_table();
+   //void output_table();
    void vtk_output(ParGridFunction &x);
 
    //Configuration parameters
@@ -345,7 +345,7 @@ void Problem::run()
    delete pmesh;
 
    vtk_output(x);
-   output_table();
+   //output_table();
 }
 
 /*
