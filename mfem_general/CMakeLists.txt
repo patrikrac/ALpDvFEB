@@ -4,8 +4,6 @@ set(CMAKE_CXX_STANDARD 11)
 
 project(mfem_general)
 
-add_compile_definitions(MFEM_USE_MPI)
-
 #find_library(mfem_LIBRARY mfem REQUIRED)
 #find_path(mfem_INCLUDE_DIR NAMES mfem.hpp REQUIRED)
 message(STATUS "Looking for mfem ...")
