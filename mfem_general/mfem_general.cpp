@@ -298,13 +298,12 @@ void Problem::run()
    a.AddDomainIntegrator(integ);
    f.AddDomainIntegrator(new DomainLFIntegrator(rhs));
 
-   KellyErrorEstimator *estimator{nullptr};
    L2_FECollection flux_fec(order, dim);
 
-   auto flux_fes = new FiniteElementSpace(pmesh, &flux_fec, sdim);
-   estimator = new KellyErrorEstimator(*integ, x, flux_fes);
+   auto flux_fes = new ParFiniteElementSpace(pmesh, &flux_fec, sdim);
+   KellyErrorEstimator estimator(*integ, x, flux_fes);
 
-   ThresholdRefiner refiner(*estimator);
+   ThresholdRefiner refiner(estimator);
    refiner.SetTotalErrorFraction(0.3); // use purely local threshold
    refiner.SetLocalErrorGoal(max_elem_error);
    refiner.PreferConformingRefinement();
@@ -341,7 +340,6 @@ void Problem::run()
       iter++;
    }
 
-   delete estimator;
    delete pmesh;
 
    vtk_output(x);
@@ -432,9 +430,10 @@ void Problem::vtk_output(ParGridFunction &x)
 {
    std::ofstream output("solution.vtk");
 
-   pmesh->PrintVTK(output, 0);
-   x.SaveVTK(output, "u", 0);
-}
+   pmesh->PrintVTU("solution.vtk");
+   //x.SaveVTK(output, "u", 0);
+} 
+
 
 int main(int argc, char *argv[])
 {
