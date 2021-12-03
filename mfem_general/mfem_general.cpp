@@ -375,6 +375,7 @@ void Problem::exact_error(int cycle, int dofs, GridFunction &x, GridFunction &er
 //----------------------------------------------------------------
 //Output the table containing the calcualted errors
 //----------------------------------------------------------------
+//TODO: print the error (of stream for single processor, check for permission)
 void Problem::output_table()
 {
    std::ofstream output("table.tex");
@@ -428,6 +429,7 @@ void Problem::output_table()
 //----------------------------------------------------------------
 void Problem::vtk_output(ParGridFunction &x)
 {
+   //TODO: Fix
    pmesh->PrintVTU("solution/", VTKFormat::ASCII, false, 0, true);
    //x.SaveVTK(output, "u", 0);
 } 
