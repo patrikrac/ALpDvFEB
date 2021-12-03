@@ -428,7 +428,7 @@ void Problem::output_table()
 //----------------------------------------------------------------
 void Problem::vtk_output(ParGridFunction &x)
 {
-   pmesh->PrintVTU("solution.vtk");
+   pmesh->PrintVTU("./solution", VTKFormat::ASCII, false, 0, true);
    //x.SaveVTK(output, "u", 0);
 } 
 
