@@ -428,8 +428,6 @@ void Problem::output_table()
 //----------------------------------------------------------------
 void Problem::vtk_output(ParGridFunction &x)
 {
-   std::ofstream output("solution.vtk");
-
    pmesh->PrintVTU("solution.vtk");
    //x.SaveVTK(output, "u", 0);
 } 
