@@ -124,16 +124,16 @@ double BoundaryValues<dim>::value(const Point<dim> &p, const unsigned int /*comp
     return pow(radius, alpha) * sin(alpha * phi) * (p(2)*p(2));
     */
 
-    
+    /*
    //Problem using the highly oszilating function
    double k = 8.0;
    return sin(k*p(0)) * cos(2*k*p(1)) * exp(p(2));
-   
+   */
 
-    /*
+    
     //Problem using the exponential function
     return exp(-10 * (p(0) + p(1))) * (p(2) * p(2));
-    */
+    
 }
 
 //------------------------------
@@ -151,18 +151,18 @@ double RHS_function<dim>::value(const Point<dim> &p, const unsigned int /*compon
 {
     //Formulate right hand side function
 
-    /* 
+    /*
     return -2.0;
     */
 
-    
+    /*
     double k = 8.0;
     return (k * k + 4 * k - 1) * sin(k * p(0)) * cos(2 * k * p(1)) * exp(p(2));
-    
-
-   /*
-    return -(200 * (p(2) * p(2)) + 2) * exp(-10 * (p(0) + p(1)));
     */
+
+   
+    return -(200 * (p(2) * p(2)) + 2) * exp(-10 * (p(0) + p(1)));
+    
 }
 
 //------------------------------
@@ -197,15 +197,15 @@ double Solution<dim>::value(const Point<dim> &p, const unsigned int /*component*
     return pow(radius, alpha) * sin(alpha * phi) * (p(2)*p(2));
     */
 
-    
+    /*
    //Problem using the highly oszilating function
    double k = 8.0;
    return sin(k*p(0)) * cos(2*k*p(1)) * exp(p(2));
+   */
    
-    /*
     //Problem using the exponential function
     return exp(-10 * (p(0) + p(1))) * (p(2) * p(2));
-    */
+    
 }
 
 //------------------------------
@@ -284,7 +284,7 @@ void ProblemHP<dim>::make_grid()
 {
     //Appropriate grid generation has to be implemented in here!
     //The default grid generated will be a unit square/cube depending on the dimensionality of the problem.
-    GridGenerator::hyper_rectangle(triangulation, Point<3>(-0.5, 0.0, 0.0), Point<3>(0.5, 1.0, 1.0));
+    GridGenerator::hyper_rectangle(triangulation, Point<3>(0.0, 0.0, 0.0), Point<3>(1.0, 1.0, 1.0));
 
     triangulation.refine_global(2);
 
@@ -793,7 +793,7 @@ void Problem<dim>::output_results()
     std::ofstream error_table_file("error.tex");
     convergence_table.write_tex(error_table_file);
 
-    std::ofstream output_custom1("error_deal2.txt");
+    std::ofstream output_custom1("error_dealii.txt");
 
     output_custom1 << "$deal.ii$" << std::endl;
     output_custom1 << "$n_\\text{dof}$" << std::endl;
@@ -805,7 +805,7 @@ void Problem<dim>::output_results()
     }
     output_custom1.close();
 
-    std::ofstream output_custom2("error_deal2_p1.txt");
+    std::ofstream output_custom2("error_dealii_p1.txt");
 
     output_custom2 << "$\\left\\|u_h(x_1) - I_hu(x_1)\\right\\| $" << std::endl;
     output_custom2 << "$n_\\text{dof}$" << std::endl;
@@ -817,7 +817,7 @@ void Problem<dim>::output_results()
     }
     output_custom2.close();
 
-    std::ofstream output_custom3("error_deal2_p2.txt");
+    std::ofstream output_custom3("error_dealii_p2.txt");
 
     output_custom3 << "$\\left\\|u_h(x_2) - I_hu(x_2)\\right\\|$" << std::endl;
     output_custom3 << "$n_\\text{dof}$" << std::endl;
@@ -829,7 +829,7 @@ void Problem<dim>::output_results()
     }
     output_custom3.close();
 
-    std::ofstream output_custom4("error_deal2_p3.txt");
+    std::ofstream output_custom4("error_dealii_p3.txt");
 
     output_custom4 << "$\\left\\|u_h(x_3) - I_hu(x_3)\\right\\|$" << std::endl;
     output_custom4 << "$n_\\text{dof}$" << std::endl;
