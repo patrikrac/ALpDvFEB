@@ -373,7 +373,8 @@ void Problem::exact_error(int cycle, int dofs, ParGridFunction &x, ParGridFuncti
    //table_vector.push_back(values);
    if(myid == 0)
    {
-      cout << "Error for step " << cycle << ": " << setprecision(3) << scientific << values.error << endl;
+      cout << "Max error for step " << cycle << ": " << setprecision(3) << scientific << values.max_error << endl;
+      cout << "L2 error: " << setprecision(3) << scientific <<values.l2_error << endl;
    }
    
 }
