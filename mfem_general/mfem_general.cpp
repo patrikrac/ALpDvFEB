@@ -259,7 +259,7 @@ void Problem::run()
    x = 0.0;
 
    refiner.Reset();
-   derefiner.Reset();
+   //derefiner.Reset();
 
    int step = 0;
    while (true)
