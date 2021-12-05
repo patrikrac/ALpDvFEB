@@ -72,7 +72,7 @@ typedef struct error_values
    int cycle;
    int cells;
    int dofs;
-   double error;
+   double max_error;
    double error_p1;
    double error_p2;
    double error_p3;
@@ -87,7 +87,7 @@ typedef struct error_values
 class Problem
 {
 public:
-   Problem() : hysteresis(0.2), max_elem_error(1.0e-10), order(2),
+   Problem() : hysteresis(0), max_elem_error(1.0e-12), order(2),
                postprocessor1({0.125, 0.125, 0.125}), postprocessor2({0.25, 0.25, 0.25}), postprocessor3({0.5, 0.5, 0.5})
    {
    }
@@ -250,12 +250,11 @@ void Problem::run()
    ThresholdRefiner refiner(*estimator);
    refiner.SetTotalErrorFraction(0.3); // use purely local threshold
    refiner.SetLocalErrorGoal(max_elem_error);
-   refiner.PreferConformingRefinement();
    refiner.SetNCLimit(0);
 
-   ThresholdDerefiner derefiner(*estimator);
-   derefiner.SetThreshold(hysteresis * max_elem_error);
-   derefiner.SetNCLimit(0);
+   //ThresholdDerefiner derefiner(*estimator);
+   //derefiner.SetThreshold(hysteresis * max_elem_error);
+   //derefiner.SetNCLimit(0);
 
    x = 0.0;
 
@@ -274,18 +273,11 @@ void Problem::run()
       exact_error(step, fespace.GetNDofs(), x, error_zero, u);
 
       //Stop the loop if no more elements are marked for refinement or the desired number of DOFs is reached.
-      if (!refine(a, f, fespace, x, error_zero, refiner) || fespace.GetNDofs() > 100000)
+      if (fespace.GetNDofs() > 100000 || !refine(a, f, fespace, x, error_zero, refiner))
       {
          break;
       }
       step++;
-   }
-
-   if (derefiner.Apply(mesh))
-   {
-      cout << "\nDerefined elements." << endl;
-
-      update(a, f, fespace, x, error_zero);
    }
 
    cout << "Final: " << step << endl
@@ -310,8 +302,8 @@ void Problem::exact_error(int cycle, int dofs, GridFunction &x, GridFunction &er
    values.cycle = cycle;
    values.dofs = dofs;
    values.cells = mesh.GetNE();
-   values.error = x.ComputeMaxError(u);
-   values.relative_error = values.error / error_zero.ComputeMaxError(u);
+   values.max_error = x.ComputeMaxError(u);
+   values.relative_error = values.max_error / error_zero.ComputeMaxError(u);
 
    double p1[] = {0.125, 0.125, 0.125};
    double p2[] = {0.25, 0.25, 0.25};
@@ -322,7 +314,7 @@ void Problem::exact_error(int cycle, int dofs, GridFunction &x, GridFunction &er
    values.error_p3 = abs(postprocessor3(x, mesh) - bdr_func(Vector(p3, 3)));
    table_vector.push_back(values);
 
-   cout << "Error for step " << cycle << ": " << setprecision(3) << scientific << values.error << endl;
+   cout << "Max error for step " << cycle << ": " << setprecision(3) << scientific << values.max_error << endl;
 }
 
 //----------------------------------------------------------------
@@ -363,8 +355,8 @@ void Problem::output_table()
    output << "\t\t\tcycle & \\# cells & \\# dofs & $\\norm{u - u_h}_{L^\\infty}$ & $\\dfrac{\\norm{u - u_h}_{L^\\infty}}{\\norm{u}_{L^\\infty}}$\\\\ \\hline" << endl;
    for (int i = 0; i < table_vector.size(); i++)
    {
-      output << "\t\t\t" << table_vector[i].cycle << " & " << table_vector[i].cells << " & " << table_vector[i].dofs << " & " << setprecision(3) << scientific << table_vector[i].error << " & " << setprecision(3) << scientific << table_vector[i].relative_error << "\\\\ \\hline" << endl;
-      output_max << table_vector[i].dofs << " " << table_vector[i].error << endl;
+      output << "\t\t\t" << table_vector[i].cycle << " & " << table_vector[i].cells << " & " << table_vector[i].dofs << " & " << setprecision(3) << scientific << table_vector[i].max_error << " & " << setprecision(3) << scientific << table_vector[i].relative_error << "\\\\ \\hline" << endl;
+      output_max << table_vector[i].dofs << " " << table_vector[i].max_error << endl;
       output_p1 << table_vector[i].dofs << " " << table_vector[i].error_p1 << endl;
       output_p2 << table_vector[i].dofs << " " << table_vector[i].error_p2 << endl;
       output_p3 << table_vector[i].dofs << " " << table_vector[i].error_p3 << endl;
