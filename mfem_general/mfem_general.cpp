@@ -102,10 +102,10 @@ private:
    void solve(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace &fespace, ParGridFunction &x, Array<int> &ess_bdr, FunctionCoefficient &bdr);
    bool refine(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace &fespace, ParGridFunction &x, ParGridFunction &error_zero, ThresholdRefiner &refiner);
 
-   //void exact_error(int cycle, int dofs, ParGridFunction &x, ParGridFunction &error_zero, FunctionCoefficient &u);
+   void exact_error(int cycle, int dofs, ParGridFunction &x, ParGridFunction &error_zero, FunctionCoefficient &u);
 
    //void output_table();
-   void vtk_output(ParGridFunction &x);
+   //void vtk_output(ParGridFunction &x);
 
    //Configuration parameters
 
@@ -326,7 +326,7 @@ void Problem::run()
 
       solve(a, f, fespace, x, ess_bdr, bdr);
 
-      //exact_error(iter, fespace.GetNDofs(), x, error_zero, u);
+      exact_error(iter, global_dofs, x, error_zero, u);
 
       //Stop the loop if no more elements are marked for refinement or the desired number of DOFs is reached.
       if ( global_dofs >= max_dofs || !refine(a, f, fespace, x, error_zero, refiner))
@@ -342,21 +342,22 @@ void Problem::run()
 
    delete pmesh;
 
-   vtk_output(x);
+   //vtk_output(x);
    //output_table();
 }
 
-/*
+
 //----------------------------------------------------------------
 //Calculate the exact error
 //----------------------------------------------------------------
-void Problem::exact_error(int cycle, int dofs, GridFunction &x, GridFunction &error_zero, FunctionCoefficient &u)
+void Problem::exact_error(int cycle, int dofs, ParGridFunction &x, ParGridFunction &error_zero, FunctionCoefficient &u)
 {
    //TODO: add the L2 error calculation.
+
    error_values values = {};
    values.cycle = cycle;
    values.dofs = dofs;
-   values.cells = mesh.GetNE();
+   //values.cells = pmesh->GetNE();
    values.error = x.ComputeMaxError(u);
    values.relative_error = values.error / error_zero.ComputeMaxError(u);
 
@@ -364,20 +365,25 @@ void Problem::exact_error(int cycle, int dofs, GridFunction &x, GridFunction &er
    double p2[] = {0.25, 0.25, 0.25};
    double p3[] = {0.5, 0.5, 0.5};
 
-   values.error_p1 = abs(postprocessor1(x, mesh) - bdr_func(Vector(p1, 3)));
-   values.error_p2 = abs(postprocessor2(x, mesh) - bdr_func(Vector(p2, 3)));
-   values.error_p3 = abs(postprocessor3(x, mesh) - bdr_func(Vector(p3, 3)));
-   table_vector.push_back(values);
-
-   cout << "Error for step " << cycle << ": " << setprecision(3) << scientific << values.error << endl;
+   //values.error_p1 = abs(postprocessor1(x, pmesh) - bdr_func(Vector(p1, 3)));
+   //values.error_p2 = abs(postprocessor2(x, pmesh) - bdr_func(Vector(p2, 3)));
+   //values.error_p3 = abs(postprocessor3(x, pmesh) - bdr_func(Vector(p3, 3)));
+   //table_vector.push_back(values);
+   if(myid == 0)
+   {
+      cout << "Error for step " << cycle << ": " << setprecision(3) << scientific << values.error << endl;
+   }
+   
 }
 
+/*
 //----------------------------------------------------------------
 //Output the table containing the calcualted errors
 //----------------------------------------------------------------
 //TODO: print the error (of stream for single processor, check for permission)
 void Problem::output_table()
 {
+   
    std::ofstream output("table.tex");
    std::ofstream output_max("error_mfem.txt");
    std::ofstream output_p1("error_p1.txt");
@@ -421,9 +427,11 @@ void Problem::output_table()
    output << "\t\t\\end{tabular}" << endl;
    output << "\t\\end{center}" << endl;
    output << "\\end{table}" << endl;
+
 }
 */
 
+/*
 //----------------------------------------------------------------
 //Create a vtk Output for the current solution
 //----------------------------------------------------------------
@@ -433,7 +441,7 @@ void Problem::vtk_output(ParGridFunction &x)
    pmesh->PrintVTU("solution/", VTKFormat::ASCII, false, 0, true);
    //x.SaveVTK(output, "u", 0);
 } 
-
+*/
 
 int main(int argc, char *argv[])
 {
