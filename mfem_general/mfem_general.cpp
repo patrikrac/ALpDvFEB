@@ -72,7 +72,8 @@ typedef struct error_values
    int cycle;
    int cells;
    int dofs;
-   double error;
+   double max_error;
+   double l2_error;
    double error_p1;
    double error_p2;
    double error_p3;
@@ -358,8 +359,9 @@ void Problem::exact_error(int cycle, int dofs, ParGridFunction &x, ParGridFuncti
    values.cycle = cycle;
    values.dofs = dofs;
    //values.cells = pmesh->GetNE();
-   values.error = x.ComputeMaxError(u);
-   values.relative_error = values.error / error_zero.ComputeMaxError(u);
+   values.max_error = x.ComputeMaxError(u);
+   values.relative_error = values.max_error / error_zero.ComputeMaxError(u);
+   values.l2_error = x.ComputeL2Error(u);
 
    double p1[] = {0.125, 0.125, 0.125};
    double p2[] = {0.25, 0.25, 0.25};
