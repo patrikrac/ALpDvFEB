@@ -884,7 +884,8 @@ void Problem<dim>::calculate_exact_error(const unsigned int cycle)
     std::cout << "Cycle " << cycle << ':' << std::endl
               << "   Number of active cells:       " << n_active_cells
               << std::endl
-              << "   Number of degrees of freedom: " << n_dofs << std::endl;
+              << "   Number of degrees of freedom: " << n_dofs << std::endl
+              << "Max error: " << Linfty_error << std::endl;
 
     convergence_table.add_value("cycle", cycle);
     convergence_table.add_value("cells", n_active_cells);
