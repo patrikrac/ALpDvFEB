@@ -89,8 +89,8 @@ class Problem
 {
 public:
    Problem(int num_procs, int myid) : num_procs(num_procs), myid(myid),
-                                      max_dofs(1000000), reorder_mesh(0), nc_simplices(true),
-                                      hysteresis(0.2), max_elem_error(1.0e-10), order(2),
+                                      max_dofs(10000000), reorder_mesh(0), nc_simplices(true),
+                                      hysteresis(0.2), max_elem_error(1.0e-12), order(2),
                                       postprocessor1({0.125, 0.125, 0.125}), postprocessor2({0.25, 0.25, 0.25}), postprocessor3({0.5, 0.5, 0.5})
    {
    }
@@ -465,7 +465,7 @@ int main(int argc, char *argv[])
 // Exact solution, used for the Dirichlet BC.
 double bdr_func(const Vector &p)
 {
-
+   /*
    double radius = sqrt((p(0) - 0.5) * (p(0) - 0.5) + p(1) * p(1));
    double phi;
    double alpha = 1.0 / 2.0;
@@ -480,10 +480,10 @@ double bdr_func(const Vector &p)
    }
 
    return pow(radius, alpha) * sin(alpha * phi) * (p(2) * p(2));
-
-   /*
-   return exp(-10 * (p(0) + p(1))) * (p(2) * p(2));
    */
+   
+   return exp(-10 * (p(0) + p(1))) * (p(2) * p(2));
+   
    /*
    double k = 8.0;
    return sin(k*p(0)) * cos(2*k*p(1)) * exp(p(2)); 
@@ -493,12 +493,14 @@ double bdr_func(const Vector &p)
 // Right hand side function
 double rhs_func(const Vector &p)
 {
-   /*
+   
    return -(200 * (p(2) * p(2)) + 2) * exp(-10 * (p(0) + p(1)));
-   */
+   
    /*
    double k = 8.0;
    return (k * k + 4 * k - 1) * sin(k * p(0)) * cos(2 * k * p(1)) * exp(p(2));
    */
+  /*
    return -2.0;
+   */
 }
