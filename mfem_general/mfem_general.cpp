@@ -440,11 +440,8 @@ void Problem::output_table()
 //----------------------------------------------------------------
 void Problem::vtk_output(ParGridFunction &x)
 {
-   ofstream output("sol.txt");
-   pmesh->PrintAsOne(output);
-   //TODO: Fix
-   pmesh->PrintVTU("solution/");
-   //x.SaveVTK(output, "u", 0);
+   pmesh->PrintVTU("grid/");
+   x.SaveAsOne("solution");
 } 
 
 
