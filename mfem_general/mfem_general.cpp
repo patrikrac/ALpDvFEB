@@ -441,7 +441,8 @@ void Problem::output_table()
 void Problem::vtk_output(ParGridFunction &x)
 {
    pmesh->PrintVTU("grid/");
-   x.SaveAsOne("solution");
+
+   x.Save("solution");
 } 
 
 
