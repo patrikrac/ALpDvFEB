@@ -89,7 +89,7 @@ class Problem
 {
 public:
    Problem(int num_procs, int myid) : num_procs(num_procs), myid(myid),
-                                      max_dofs(10000000), reorder_mesh(0), nc_simplices(false),
+                                      max_dofs(1000000), reorder_mesh(0), nc_simplices(true),
                                       hysteresis(0.2), max_elem_error(1.0e-12), order(2),
                                       postprocessor1({0.125, 0.125, 0.125}), postprocessor2({0.25, 0.25, 0.25}), postprocessor3({0.5, 0.5, 0.5})
    {
@@ -106,7 +106,7 @@ private:
    void exact_error(int cycle, int dofs, ParGridFunction &x, ParGridFunction &error_zero, FunctionCoefficient &u);
 
    //void output_table();
-   //void vtk_output(ParGridFunction &x);
+   void vtk_output(ParGridFunction &x);
 
    //Configuration parameters
 
@@ -341,9 +341,10 @@ void Problem::run()
       iter++;
    }
 
+   vtk_output(x);
    delete pmesh;
 
-   //vtk_output(x);
+   
    //output_table();
 }
 
@@ -434,17 +435,19 @@ void Problem::output_table()
 }
 */
 
-/*
+
 //----------------------------------------------------------------
 //Create a vtk Output for the current solution
 //----------------------------------------------------------------
 void Problem::vtk_output(ParGridFunction &x)
 {
+   ofstream output("sol.txt");
+   pmesh->PrintAsOne(output);
    //TODO: Fix
    pmesh->PrintVTU("solution/", VTKFormat::ASCII, false, 0, true);
    //x.SaveVTK(output, "u", 0);
 } 
-*/
+
 
 int main(int argc, char *argv[])
 {
