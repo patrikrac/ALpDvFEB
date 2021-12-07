@@ -73,6 +73,7 @@ typedef struct error_values
    int cells;
    int dofs;
    double max_error;
+   double l2_error;
    double error_p1;
    double error_p2;
    double error_p3;
@@ -248,7 +249,7 @@ void Problem::run()
    estimator = new KellyErrorEstimator(*integ, x, flux_fes);
 
    ThresholdRefiner refiner(*estimator);
-   refiner.SetTotalErrorFraction(0.3); // use purely local threshold
+   refiner.SetTotalErrorFraction(0.3);
    refiner.SetLocalErrorGoal(max_elem_error);
    refiner.SetNCLimit(0);
 
@@ -273,7 +274,7 @@ void Problem::run()
       exact_error(step, fespace.GetNDofs(), x, error_zero, u);
 
       //Stop the loop if no more elements are marked for refinement or the desired number of DOFs is reached.
-      if (fespace.GetNDofs() > 100000 || !refine(a, f, fespace, x, error_zero, refiner))
+      if (fespace.GetNDofs() > 1000000 || !refine(a, f, fespace, x, error_zero, refiner))
       {
          break;
       }
@@ -297,13 +298,14 @@ void Problem::run()
 //----------------------------------------------------------------
 void Problem::exact_error(int cycle, int dofs, GridFunction &x, GridFunction &error_zero, FunctionCoefficient &u)
 {
-   //TODO: add the L2 error calculation.
+
    error_values values = {};
    values.cycle = cycle;
    values.dofs = dofs;
    values.cells = mesh.GetNE();
    values.max_error = x.ComputeMaxError(u);
-   values.relative_error = values.max_error / error_zero.ComputeMaxError(u);
+   values.l2_error = x.ComputeL2Error(u);
+   values.relative_error = values.l2_error / error_zero.ComputeL2Error(u);
 
    double p1[] = {0.125, 0.125, 0.125};
    double p2[] = {0.25, 0.25, 0.25};
@@ -315,6 +317,7 @@ void Problem::exact_error(int cycle, int dofs, GridFunction &x, GridFunction &er
    table_vector.push_back(values);
 
    cout << "Max error for step " << cycle << ": " << setprecision(3) << scientific << values.max_error << endl;
+   cout << "L2 error: " << setprecision(3) << scientific << values.l2_error << endl;
 }
 
 //----------------------------------------------------------------
@@ -323,10 +326,16 @@ void Problem::exact_error(int cycle, int dofs, GridFunction &x, GridFunction &er
 void Problem::output_table()
 {
    std::ofstream output("table.tex");
-   std::ofstream output_max("error_mfem.txt");
+   std::ofstream output_max("error_max_mfem.txt");
+   std::ofstream output_l2("error_l2_mfem.txt");
    std::ofstream output_p1("error_p1.txt");
    std::ofstream output_p2("error_p2.txt");
    std::ofstream output_p3("error_p3.txt");
+
+   output_l2 << "MFEM" << endl;
+   output_l2 << "$n_\\text{dof}$" << endl;
+   output_l2 << "$\\left\\|u - u_h\\right\\| _{L^2}$" << endl;
+   output_l2 << table_vector.size() << endl;
 
    output_max << "MFEM" << endl;
    output_max << "$n_\\text{dof}$" << endl;
@@ -352,11 +361,12 @@ void Problem::output_table()
    output << "\t\\begin{center}" << endl;
    output << "\t\t\\begin{tabular}{|c|c|c|c|c|} \\hline" << endl;
 
-   output << "\t\t\tcycle & \\# cells & \\# dofs & $\\norm{u - u_h}_{L^\\infty}$ & $\\dfrac{\\norm{u - u_h}_{L^\\infty}}{\\norm{u}_{L^\\infty}}$\\\\ \\hline" << endl;
+   output << "\t\t\tcycle & \\# cells & \\# dofs & $\\norm{u - u_h}_{L^\\infty}$ & $\\norm{u - u_h}_{L^\\2}$ \\\\  \\hline" << endl;
    for (int i = 0; i < table_vector.size(); i++)
    {
-      output << "\t\t\t" << table_vector[i].cycle << " & " << table_vector[i].cells << " & " << table_vector[i].dofs << " & " << setprecision(3) << scientific << table_vector[i].max_error << " & " << setprecision(3) << scientific << table_vector[i].relative_error << "\\\\ \\hline" << endl;
+      output << "\t\t\t" << table_vector[i].cycle << " & " << table_vector[i].cells << " & " << table_vector[i].dofs << " & " << setprecision(3) << scientific << table_vector[i].max_error << " & " << setprecision(3) << scientific << table_vector[i].l2_error << "\\\\ \\hline" << endl;
       output_max << table_vector[i].dofs << " " << table_vector[i].max_error << endl;
+      output_l2 << table_vector[i].dofs << " " << table_vector[i].l2_error << endl;
       output_p1 << table_vector[i].dofs << " " << table_vector[i].error_p1 << endl;
       output_p2 << table_vector[i].dofs << " " << table_vector[i].error_p2 << endl;
       output_p3 << table_vector[i].dofs << " " << table_vector[i].error_p3 << endl;
