@@ -400,7 +400,7 @@ double bdr_func(const Vector &p)
    
    double radius = sqrt((p(0)-0.5) * (p(0)-0.5) + p(1) * p(1));
    double phi;
-   double alpha = 1.0;
+   double alpha = 1.0/2.0;
 
    if (p(1) < 0)
    {
