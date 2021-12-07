@@ -398,17 +398,17 @@ int main(int argc, char *argv[])
 double bdr_func(const Vector &p)
 {
    
-   double radius = sqrt((p(0)-0.5) * (p(0)-0.5) + p(1) * p(1));
+   double radius = sqrt(p(0) * p(0) + p(1) * p(1));
    double phi;
    double alpha = 1.0/2.0;
 
    if (p(1) < 0)
    {
-      phi = 2 * M_PI + atan2(p(1), (p(0)-0.5));
+      phi = 2 * M_PI + atan2(p(1), p(0));
    }
    else
    {
-      phi = atan2(p(1), (p(0)-0.5));
+      phi = atan2(p(1), p(0));
    }
 
    return pow(radius, alpha) * sin(alpha * phi) * (p(2) * p(2));
