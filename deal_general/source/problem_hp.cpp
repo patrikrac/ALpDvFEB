@@ -1,5 +1,6 @@
 #include "../include/problem_hp.hpp"
 
+using namespace dealii;
 //------------------------------
 //The dof_handler manages enumeration and indexing of all degrees of freedom (relating to the given triangulation).
 //Set an adequate maximum degree.

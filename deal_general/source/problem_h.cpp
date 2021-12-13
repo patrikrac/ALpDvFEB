@@ -1,5 +1,6 @@
 #include "../include/problem_h.hpp"
 
+using namespace dealii;
 //------------------------------
 //Initialize the problem with first order finite elements
 //The dof_handler manages enumeration and indexing of all degrees of freedom (relating to the given triangulation)
