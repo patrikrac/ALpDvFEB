@@ -6,7 +6,15 @@ using namespace dealii;
 //The dof_handler manages enumeration and indexing of all degrees of freedom (relating to the given triangulation)
 //------------------------------
 template <int dim>
-Problem<dim>::Problem() : fe(2), dof_handler(triangulation), postprocessor1(Point<dim>(0.125, 0.125, 0.125)), postprocessor2(Point<dim>(0.25, 0.25, 0.25)), postprocessor3(Point<dim>(0.5, 0.5, 0.5))
+Problem<dim>::Problem() : mpi_communicator(MPI_COMM_WORLD),
+                          n_mpi_processes(Utilities::MPI::n_mpi_processes(mpi_communicator)),
+                          this_mpi_process(Utilities::MPI::this_mpi_process(mpi_communicator)),
+                          pcout(std::cout, (this_mpi_process == 0)),
+                          fe(2),
+                          dof_handler(triangulation),
+                          postprocessor1(Point<dim>(0.125, 0.125, 0.125)),
+                          postprocessor2(Point<dim>(0.25, 0.25, 0.25)),
+                          postprocessor3(Point<dim>(0.5, 0.5, 0.5))
 {
 }
 
@@ -33,11 +41,10 @@ void Problem<dim>::make_grid()
 template <int dim>
 void Problem<dim>::setup_system()
 {
-    dof_handler.distribute_dofs(fe);
-    //std::cout << "Number of degrees of freedom: " << dof_handler.n_dofs() << std::endl;
+    GridTools::partition_triangulation(n_mpi_processes, triangulation);
 
-    solution.reinit(dof_handler.n_dofs());
-    system_rhs.reinit(dof_handler.n_dofs());
+    dof_handler.distribute_dofs(fe);
+    DoFRenumbering::subdomain_wise(dof_handler);
 
     constraints.clear();
     DoFTools::make_hanging_node_constraints(dof_handler, constraints);
@@ -47,10 +54,15 @@ void Problem<dim>::setup_system()
     constraints.close();
 
     DynamicSparsityPattern dsp(dof_handler.n_dofs());
-    DoFTools::make_sparsity_pattern(dof_handler, dsp, constraints, true);
-    sparsity_pattern.copy_from(dsp);
+    DoFTools::make_sparsity_pattern(dof_handler, dsp, constraints, false);
 
-    system_matrix.reinit(sparsity_pattern);
+    const std::vector<IndexSet> locally_owned_dofs_per_proc = DoFTools::locally_owned_dofs_per_subdomain(dof_handler);
+    const IndexSet locally_owned_dofs = locally_owned_dofs_per_proc[this_mpi_process];
+
+    system_matrix.reinit(locally_owned_dofs, locally_owned_dofs, dsp, mpi_communicator);
+
+    solution.reinit(locally_owned_dofs, mpi_communicator);
+    system_rhs.reinit(locally_owned_dofs, mpi_communicator);
 }
 
 //------------------------------
@@ -65,43 +77,53 @@ void Problem<dim>::assemble_system()
                             update_values | update_gradients | update_quadrature_points | update_JxW_values);
 
     const unsigned int dofs_per_cell = fe.n_dofs_per_cell();
-
-    RHS_function<dim> rhs;
+    const unsigned int n_q_points = quadrature_formula.size();
 
     FullMatrix<double> cell_matrix(dofs_per_cell, dofs_per_cell);
     Vector<double> cell_rhs(dofs_per_cell);
 
-    std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
+    RHS_function<dim> rhs;
 
     for (const auto &cell : dof_handler.active_cell_iterators())
     {
-        fe_values.reinit(cell);
-        cell_matrix = 0;
-        cell_rhs = 0;
-
-        for (const unsigned int q_index : fe_values.quadrature_point_indices())
+        if (cell->subdomain_id() == this_mpi_process)
         {
+            cell_matrix = 0;
+            cell_rhs = 0;
+            fe_values.reinit(cell);
 
-            const auto &x_q = fe_values.quadrature_point(q_index);
-
-            for (const unsigned int i : fe_values.dof_indices())
+            for (const unsigned int q_index : fe_values.quadrature_point_indices())
             {
-                for (const unsigned int j : fe_values.dof_indices())
-                    cell_matrix(i, j) +=
-                        (fe_values.shape_grad(i, q_index) * // grad phi_i(x_q)
-                         fe_values.shape_grad(j, q_index) * // grad phi_j(x_q)
-                         fe_values.JxW(q_index));           //dx
 
-                cell_rhs(i) += (fe_values.shape_value(i, q_index) * // phi_i(x_q)
-                                rhs.value(x_q) *                    // f(x_q)
-                                fe_values.JxW(q_index));            // dx
+                const auto &x_q = fe_values.quadrature_point(q_index);
+
+                for (const unsigned int i : fe_values.dof_indices())
+                {
+                    for (const unsigned int j : fe_values.dof_indices())
+                    {
+                        cell_matrix(i, j) +=
+                            (fe_values.shape_grad(i, q_index) * // grad phi_i(x_q)
+                             fe_values.shape_grad(j, q_index) * // grad phi_j(x_q)
+                             fe_values.JxW(q_index));           //dx
+                    }
+
+                    cell_rhs(i) += (fe_values.shape_value(i, q_index) * // phi_i(x_q)
+                                    rhs.value(x_q) *                    // f(x_q)
+                                    fe_values.JxW(q_index));            // dx
+                }
             }
-        }
 
-        //Now add the calculated local matrix to the global sparse matrix
-        cell->get_dof_indices(local_dof_indices);
-        constraints.distribute_local_to_global(cell_matrix, cell_rhs, local_dof_indices, system_matrix, system_rhs);
+            //Now add the calculated local matrix to the global sparse matrix
+            cell->get_dof_indices(local_dof_indices);
+            constraints.distribute_local_to_global(cell_matrix, cell_rhs, local_dof_indices, system_matrix, system_rhs);
+        }
     }
+
+    system_matrix.compress(VectorOperation::add);
+    system_rhs.compress(VectorOperation::add);
+    std::map<types::global_dof_index, double> boundary_values;
+    VectorTools::interpolate_boundary_values(dof_handler, 0, Functions::ZeroFunction<dim>(dim), boundary_values);
+    MatrixTools::apply_boundary_values(boundary_values, system_matrix, solution, system_rhs, false);
 }
 
 //------------------------------
@@ -120,14 +142,16 @@ template <int dim>
 void Problem<dim>::solve()
 {
     SolverControl solver_control(1000, 1e-12);
-    SolverCG<Vector<double>> solver(solver_control);
+    PETScWrappers::SolverCG cg(solver_control, mpi_communicator);
 
-    PreconditionSSOR<SparseMatrix<double>> preconditioner;
-    preconditioner.initialize(system_matrix, 1.2);
+    PETScWrappers::PreconditionBlockJacobi preconditioner(system_matrix);
 
-    solver.solve(system_matrix, solution, system_rhs, preconditioner);
+    cg.solve(system_matrix, solution, system_rhs, preconditioner);
+    Vector<double> localized_solution(solution);
 
-    constraints.distribute(solution);
+    constraints.distribute(localized_solution);
+
+    solution = localized_solution;
 }
 
 //------------------------------
@@ -136,11 +160,28 @@ void Problem<dim>::solve()
 template <int dim>
 void Problem<dim>::refine_grid()
 {
-    Vector<float> estimated_error_per_cell(triangulation.n_active_cells());
+    const Vector<double> localized_solution(solution);
 
-    KellyErrorEstimator<dim>::estimate(dof_handler, QGauss<dim - 1>(fe.degree + 1), {}, solution, estimated_error_per_cell);
+    Vector<float> local_error_per_cell(triangulation.n_active_cells());
+    KellyErrorEstimator<dim>::estimate(dof_handler, QGauss<dim - 1>(fe.degree + 1), {},
+                                       localized_solution,
+                                       local_error_per_cell,
+                                       ComponentMask(),
+                                       nullptr,
+                                       MultithreadInfo::n_threads(),
+                                       this_mpi_process);
 
-    GridRefinement::refine_and_coarsen_fixed_number(triangulation, estimated_error_per_cell, 0.3, 0.03);
+    const unsigned int n_local_cells = GridTools::count_cells_with_subdomain_association(triangulation, this_mpi_process);
+
+    PETScWrappers::MPI::Vector distributed_all_errors(mpi_communicator, triangulation.n_active_cells(), n_local_cells);
+    for (unsigned int i = 0; i < local_error_per_cell.size(); i++)
+    {
+        if (local_error_per_cell(i) != 0)
+            distributed_all_errors(i) = local_error_per_cell(i);
+    }
+    distributed_all_errors.compress(VectorOperation::insert);
+    const Vector<float> localized_all_errors(distributed_all_errors);
+    GridRefinement::refine_and_coarsen_fixed_number(triangulation, localized_all_errors, 0.3, 0.03);
 
     triangulation.execute_coarsening_and_refinement();
 }
@@ -149,87 +190,99 @@ void Problem<dim>::refine_grid()
 //Output the result using a vtk file format
 //------------------------------
 template <int dim>
-void Problem<dim>::output_results()
+void Problem<dim>::output_results(const unsigned int cycle)
 {
-    DataOut<dim> data_out;
-
-    data_out.attach_dof_handler(dof_handler);
-    data_out.add_data_vector(solution, "u");
-
-    data_out.build_patches();
-
-    std::ofstream output("solution.vtk");
-    data_out.write_vtk(output);
-
-    convergence_table.set_precision("Linfty", 3);
-    convergence_table.set_precision("relativeLinfty", 3);
-    convergence_table.set_precision("error_p1", 3);
-    convergence_table.set_precision("error_p2", 3);
-    convergence_table.set_precision("error_p3", 3);
-    convergence_table.set_scientific("Linfty", true);
-    convergence_table.set_scientific("relativeLinfty", true);
-    convergence_table.set_scientific("error_p1", true);
-    convergence_table.set_scientific("error_p2", true);
-    convergence_table.set_scientific("error_p3", true);
-
-    convergence_table.set_tex_caption("cells", "\\# cells");
-    convergence_table.set_tex_caption("dofs", "\\# dofs");
-    convergence_table.set_tex_caption("Linfty", "$\\left\\|u_h - I_hu\\right\\| _{L^\\infty}$");
-    convergence_table.set_tex_caption("relativeLinfty", "$\\frac{\\left\\|u_h - I_hu\\right\\| _{L^\\infty}}{\\left\\|I_hu\\right\\| _{L^\\infty}}$");
-    convergence_table.set_tex_caption("error_p1", "$\\left\\|u_h(x_1) - I_hu(x_1)\\right\\| $");
-    convergence_table.set_tex_caption("error_p2", "$\\left\\|u_h(x_2) - I_hu(x_2)\\right\\| $");
-    convergence_table.set_tex_caption("error_p3", "$\\left\\|u_h(x_3) - I_hu(x_3)\\right\\| $");
-
-    std::ofstream error_table_file("error.tex");
-    convergence_table.write_tex(error_table_file);
-
-    std::ofstream output_custom1("error_dealii.txt");
-
-    output_custom1 << "$deal.ii$" << std::endl;
-    output_custom1 << "$n_\\text{dof}$" << std::endl;
-    output_custom1 << "$\\left\\|u_h - I_hu\\right\\| $" << std::endl;
-    output_custom1 << convergence_vector.size() << std::endl;
-    for (size_t i = 0; i < convergence_vector.size(); i++)
+    const Vector<double> localized_solution(solution);
+    if (this_mpi_process == 0)
     {
-        output_custom1 << convergence_vector[i].n_dofs << " " << convergence_vector[i].error << std::endl;
+        std::ofstream output("solution/solution-" + std::to_string(cycle) + ".vtk");
+
+        DataOut<dim> data_out;
+
+        data_out.attach_dof_handler(dof_handler);
+
+        data_out.add_data_vector(localized_solution, "u");
+
+        data_out.build_patches();
+        data_out.write_vtk(output);
     }
-    output_custom1.close();
+}
 
-    std::ofstream output_custom2("error_dealii_p1.txt");
-
-    output_custom2 << "$\\left\\|u_h(x_1) - I_hu(x_1)\\right\\| $" << std::endl;
-    output_custom2 << "$n_\\text{dof}$" << std::endl;
-    output_custom2 << "$\\left\\|u_h(x) - I_hu(x)\\right\\|$" << std::endl;
-    output_custom2 << convergence_vector.size() << std::endl;
-    for (size_t i = 0; i < convergence_vector.size(); i++)
+template <int dim>
+void Problem<dim>::output_error()
+{
+    if (this_mpi_process == 0)
     {
-        output_custom2 << convergence_vector[i].n_dofs << " " << convergence_vector[i].error_p1 << std::endl;
+        convergence_table.set_precision("Linfty", 3);
+        convergence_table.set_precision("relativeLinfty", 3);
+        convergence_table.set_precision("error_p1", 3);
+        convergence_table.set_precision("error_p2", 3);
+        convergence_table.set_precision("error_p3", 3);
+        convergence_table.set_scientific("Linfty", true);
+        convergence_table.set_scientific("relativeLinfty", true);
+        convergence_table.set_scientific("error_p1", true);
+        convergence_table.set_scientific("error_p2", true);
+        convergence_table.set_scientific("error_p3", true);
+
+        convergence_table.set_tex_caption("cells", "\\# cells");
+        convergence_table.set_tex_caption("dofs", "\\# dofs");
+        convergence_table.set_tex_caption("Linfty", "$\\left\\|u_h - I_hu\\right\\| _{L^\\infty}$");
+        convergence_table.set_tex_caption("relativeLinfty", "$\\frac{\\left\\|u_h - I_hu\\right\\| _{L^\\infty}}{\\left\\|I_hu\\right\\| _{L^\\infty}}$");
+        convergence_table.set_tex_caption("error_p1", "$\\left\\|u_h(x_1) - I_hu(x_1)\\right\\| $");
+        convergence_table.set_tex_caption("error_p2", "$\\left\\|u_h(x_2) - I_hu(x_2)\\right\\| $");
+        convergence_table.set_tex_caption("error_p3", "$\\left\\|u_h(x_3) - I_hu(x_3)\\right\\| $");
+
+        std::ofstream error_table_file("error.tex");
+        convergence_table.write_tex(error_table_file);
+
+        std::ofstream output_custom1("error_dealii.txt");
+
+        output_custom1 << "$deal.ii$" << std::endl;
+        output_custom1 << "$n_\\text{dof}$" << std::endl;
+        output_custom1 << "$\\left\\|u_h - I_hu\\right\\| $" << std::endl;
+        output_custom1 << convergence_vector.size() << std::endl;
+        for (size_t i = 0; i < convergence_vector.size(); i++)
+        {
+            output_custom1 << convergence_vector[i].n_dofs << " " << convergence_vector[i].error << std::endl;
+        }
+        output_custom1.close();
+
+        std::ofstream output_custom2("error_dealii_p1.txt");
+
+        output_custom2 << "$\\left\\|u_h(x_1) - I_hu(x_1)\\right\\| $" << std::endl;
+        output_custom2 << "$n_\\text{dof}$" << std::endl;
+        output_custom2 << "$\\left\\|u_h(x) - I_hu(x)\\right\\|$" << std::endl;
+        output_custom2 << convergence_vector.size() << std::endl;
+        for (size_t i = 0; i < convergence_vector.size(); i++)
+        {
+            output_custom2 << convergence_vector[i].n_dofs << " " << convergence_vector[i].error_p1 << std::endl;
+        }
+        output_custom2.close();
+
+        std::ofstream output_custom3("error_dealii_p2.txt");
+
+        output_custom3 << "$\\left\\|u_h(x_2) - I_hu(x_2)\\right\\|$" << std::endl;
+        output_custom3 << "$n_\\text{dof}$" << std::endl;
+        output_custom3 << "$\\left\\|u_h(x) - I_hu(x)\\right\\| $" << std::endl;
+        output_custom3 << convergence_vector.size() << std::endl;
+        for (size_t i = 0; i < convergence_vector.size(); i++)
+        {
+            output_custom3 << convergence_vector[i].n_dofs << " " << convergence_vector[i].error_p2 << std::endl;
+        }
+        output_custom3.close();
+
+        std::ofstream output_custom4("error_dealii_p3.txt");
+
+        output_custom4 << "$\\left\\|u_h(x_3) - I_hu(x_3)\\right\\|$" << std::endl;
+        output_custom4 << "$n_\\text{dof}$" << std::endl;
+        output_custom4 << "$\\left\\|u_h(x) - I_hu(x)\\right\\| $" << std::endl;
+        output_custom4 << convergence_vector.size() << std::endl;
+        for (size_t i = 0; i < convergence_vector.size(); i++)
+        {
+            output_custom4 << convergence_vector[i].n_dofs << " " << convergence_vector[i].error_p3 << std::endl;
+        }
+        output_custom4.close();
     }
-    output_custom2.close();
-
-    std::ofstream output_custom3("error_dealii_p2.txt");
-
-    output_custom3 << "$\\left\\|u_h(x_2) - I_hu(x_2)\\right\\|$" << std::endl;
-    output_custom3 << "$n_\\text{dof}$" << std::endl;
-    output_custom3 << "$\\left\\|u_h(x) - I_hu(x)\\right\\| $" << std::endl;
-    output_custom3 << convergence_vector.size() << std::endl;
-    for (size_t i = 0; i < convergence_vector.size(); i++)
-    {
-        output_custom3 << convergence_vector[i].n_dofs << " " << convergence_vector[i].error_p2 << std::endl;
-    }
-    output_custom3.close();
-
-    std::ofstream output_custom4("error_dealii_p3.txt");
-
-    output_custom4 << "$\\left\\|u_h(x_3) - I_hu(x_3)\\right\\|$" << std::endl;
-    output_custom4 << "$n_\\text{dof}$" << std::endl;
-    output_custom4 << "$\\left\\|u_h(x) - I_hu(x)\\right\\| $" << std::endl;
-    output_custom4 << convergence_vector.size() << std::endl;
-    for (size_t i = 0; i < convergence_vector.size(); i++)
-    {
-        output_custom4 << convergence_vector[i].n_dofs << " " << convergence_vector[i].error_p3 << std::endl;
-    }
-    output_custom4.close();
 }
 
 //----------------------------------------------------------------
@@ -271,7 +324,7 @@ void Problem<dim>::calculate_exact_error(const unsigned int cycle)
     double error_p2 = abs(postprocessor2(dof_handler, solution) - Solution<dim>().value(Point<dim>(0.25, 0.25, 0.25)));
     double error_p3 = abs(postprocessor3(dof_handler, solution) - Solution<dim>().value(Point<dim>(0.5, 0.5, 0.5)));
 
-    std::cout << "Cycle " << cycle << ':' << std::endl
+    pcout << "Cycle " << cycle << ':' << std::endl
               << "   Number of active cells:       " << n_active_cells
               << std::endl
               << "   Number of degrees of freedom: " << n_dofs << std::endl
@@ -320,8 +373,9 @@ void Problem<dim>::run()
         assemble_system();
         solve();
 
-        calculate_exact_error(cycle);
-
+        //calculate_exact_error(cycle);
+        pcout << "Cycle " << cycle << std::endl;
+        output_results(cycle);
         //Netgen similar condition to reach desired number of degrees of freedom
         if (get_n_dof() > 100000)
         {
@@ -331,5 +385,5 @@ void Problem<dim>::run()
         cycle++;
     }
 
-    output_results();
+    
 }

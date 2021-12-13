@@ -30,6 +30,18 @@
 #include <deal.II/fe/fe_series.h>
 #include <deal.II/numerics/smoothness_estimator.h>
 
+#include <deal.II/base/conditional_ostream.h>
+#include <deal.II/base/mpi.h>
+
+#include <deal.II/lac/petsc_vector.h>
+#include <deal.II/lac/petsc_sparse_matrix.h>
+
+#include <deal.II/lac/petsc_solver.h>
+#include <deal.II/lac/petsc_precondition.h>
+
+#include <deal.II/grid/grid_tools.h>
+#include <deal.II/dofs/dof_renumbering.h>
+
 #include <fstream>
 #include <iostream>
 #include <vector>

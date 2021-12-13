@@ -26,7 +26,14 @@ private:
     void solve();
     void refine_grid();
     void calculate_exact_error(const unsigned int cycle);
-    void output_results();
+    void output_results(const unsigned int cycle);
+    void output_error();
+
+    MPI_Comm mpi_communicator;
+    const unsigned int n_mpi_processes;
+    const unsigned int this_mpi_process;
+
+    ConditionalOStream pcout;
 
     Triangulation<dim> triangulation;
     FE_Q<dim> fe;
@@ -34,11 +41,10 @@ private:
 
     AffineConstraints<double> constraints;
 
-    SparsityPattern sparsity_pattern;
-    SparseMatrix<double> system_matrix;
+    PETScWrappers::MPI::SparseMatrix system_matrix;
 
-    Vector<double> solution;
-    Vector<double> system_rhs;
+    PETScWrappers::MPI::Vector solution;
+    PETScWrappers::MPI::Vector system_rhs;
 
     ConvergenceTable convergence_table;
     PointValueEvaluation<dim> postprocessor1;
