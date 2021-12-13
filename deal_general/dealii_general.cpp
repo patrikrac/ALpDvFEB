@@ -944,7 +944,7 @@ void Problem<dim>::run()
     output_results();
 }
 
-int main(int argc, char **argv)
+int main(void)
 {
     Problem<3> l;
     l.run();
