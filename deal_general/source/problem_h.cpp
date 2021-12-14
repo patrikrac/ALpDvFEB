@@ -82,6 +82,8 @@ void Problem<dim>::assemble_system()
     FullMatrix<double> cell_matrix(dofs_per_cell, dofs_per_cell);
     Vector<double> cell_rhs(dofs_per_cell);
 
+    std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
+
     RHS_function<dim> rhs;
 
     for (const auto &cell : dof_handler.active_cell_iterators())
