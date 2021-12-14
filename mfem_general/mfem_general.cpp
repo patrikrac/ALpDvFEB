@@ -273,6 +273,8 @@ void Problem::run()
 
       exact_error(step, fespace.GetNDofs(), x, error_zero, u);
 
+      vtk_output(x, step);
+
       //Stop the loop if no more elements are marked for refinement or the desired number of DOFs is reached.
       if (fespace.GetNDofs() > 1000000 || !refine(a, f, fespace, x, error_zero, refiner))
       {
@@ -289,7 +291,6 @@ void Problem::run()
 
    delete estimator;
 
-   vtk_output(x);
    output_table();
 }
 
@@ -380,9 +381,9 @@ void Problem::output_table()
 //----------------------------------------------------------------
 //Create a vtk Output for the current solution
 //----------------------------------------------------------------
-void Problem::vtk_output(GridFunction &x)
+void Problem::vtk_output(GridFunction &x, int &cycle)
 {
-   std::ofstream output("solution.vtk");
+   std::ofstream output("solution/solution_cycle"+cycle+".vtk");
 
    mesh.PrintVTK(output, 0);
    x.SaveVTK(output, "u", 0);
@@ -414,27 +415,27 @@ double bdr_func(const Vector &p)
    return pow(radius, alpha) * sin(alpha * phi) * (p(2) * p(2));
    */
 
-   /*
-   return exp(-10 * (p(0) + p(1))) * (p(2) * p(2));
-   */
-
    
+   return exp(-10 * (p(0) + p(1))) * (p(2) * p(2));
+   
+
+   /*
    double k = 8.0;
    return sin(k*p(0)) * cos(2*k*p(1)) * exp(p(2)); 
-   
+   */
 }
 
 // Right hand side function
 double rhs_func(const Vector &p)
 {
-   /*
-   return -(200 * (p(2) * p(2)) + 2) * exp(-10 * (p(0) + p(1)));
-   */
-
    
+   return -(200 * (p(2) * p(2)) + 2) * exp(-10 * (p(0) + p(1)));
+   
+
+   /*
    double k = 8.0;
    return (k * k + 4 * k - 1) * sin(k * p(0)) * cos(2 * k * p(1)) * exp(p(2));
-   
+   */
   /*
    return -2.0;
    */
