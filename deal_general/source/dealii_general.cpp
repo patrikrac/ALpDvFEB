@@ -8,8 +8,10 @@ The classes defined here can be modified in order to solve each specific Problem
 
 using namespace dealii;
 
-int main(void)
+int main(int argc, char * argv[])
 {
+    Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
+
     Problem<3> l;
     l.run();
     return 0;
