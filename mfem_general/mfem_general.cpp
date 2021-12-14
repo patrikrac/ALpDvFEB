@@ -383,7 +383,7 @@ void Problem::output_table()
 //----------------------------------------------------------------
 void Problem::vtk_output(GridFunction &x, int &cycle)
 {
-   std::ofstream output("solution/solution_cycle"+cycle+".vtk");
+   std::ofstream output("solution/solution-" + std::to_string(cycle) + ".vtk");
 
    mesh.PrintVTK(output, 0);
    x.SaveVTK(output, "u", 0);
