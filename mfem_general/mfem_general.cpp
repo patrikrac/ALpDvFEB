@@ -105,7 +105,7 @@ private:
 
    void output_table();
    void glvis_output(GridFunction &x);
-   void vtk_output(GridFunction &x, int cycle);
+   void vtk_output(GridFunction &x, int &cycle);
 
    //Configuration parameters
    double hysteresis; //derefinement safety coefficient
