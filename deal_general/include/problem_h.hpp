@@ -26,7 +26,7 @@ private:
     void solve();
     void refine_grid();
     void calculate_exact_error(const unsigned int cycle);
-    void output_results(const unsigned int cycle);
+    void output_results(const unsigned int cycle) const;
     void output_error();
 
     MPI_Comm mpi_communicator;

@@ -32,7 +32,7 @@ void Problem<dim>::make_grid()
 
     triangulation.refine_global(3);
 
-    std::cout << "Number of active cells: " << triangulation.n_active_cells() << std::endl;
+    pcout << "Number of active cells: " << triangulation.n_active_cells() << std::endl;
 }
 
 //------------------------------
@@ -192,7 +192,7 @@ void Problem<dim>::refine_grid()
 //Output the result using a vtk file format
 //------------------------------
 template <int dim>
-void Problem<dim>::output_results(const unsigned int cycle)
+void Problem<dim>::output_results(const unsigned int cycle) const
 {
     const Vector<double> localized_solution(solution);
     if (this_mpi_process == 0)
