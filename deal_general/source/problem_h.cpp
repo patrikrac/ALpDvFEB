@@ -49,7 +49,7 @@ void Problem<dim>::setup_system()
     constraints.clear();
     DoFTools::make_hanging_node_constraints(dof_handler, constraints);
 
-    VectorTools::interpolate_boundary_values(dof_handler, 0, BoundaryValues<dim>(), constraints);
+    //VectorTools::interpolate_boundary_values(dof_handler, 0, BoundaryValues<dim>(), constraints);
 
     constraints.close();
 
