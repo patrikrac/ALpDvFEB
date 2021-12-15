@@ -1,4 +1,4 @@
-#include "equation_data.hpp"
+#include "data.hpp"
 #include "evaluation.hpp"
 #pragma once
 
