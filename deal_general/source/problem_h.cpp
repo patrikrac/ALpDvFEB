@@ -28,7 +28,7 @@ void Problem<dim>::make_grid()
     //Appropriate grid generation has to be implemented in here!
     //The default grid generated will be a unit square/cube depending on the dimensionality of the problem.
 
-    GridGenerator::hyper_rectangle(triangulation, Point<3>(0.0, 0.0, 0.0), Point<3>(1.0, 1.0, 1.0));
+    GridGenerator::hyper_cube(triangulation, 0, 1);
 
     triangulation.refine_global(3);
 
