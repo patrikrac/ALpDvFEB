@@ -197,7 +197,7 @@ void Problem<dim>::output_results(const unsigned int cycle) const
     const Vector<double> localized_solution(solution);
     if (this_mpi_process == 0)
     {
-        std::ofstream output("solution/solution-" + std::to_string(cycle) + ".vtk");
+        std::ofstream output("solution-" + std::to_string(cycle) + ".vtk");
 
         DataOut<dim> data_out;
 
