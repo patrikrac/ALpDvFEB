@@ -401,6 +401,7 @@ int main(int argc, char *argv[])
 double bdr_func(const Vector &p)
 {
    
+   
    double radius = sqrt((p(0)-0.5) * (p(0)-0.5) + p(1) * p(1));
    double phi;
    double alpha = 1.0/2.0;
@@ -436,10 +437,10 @@ double rhs_func(const Vector &p)
 
    /*
    double k = 8.0;
-   return (k * k + 4 * k - 1) * sin(k * p(0)) * cos(2 * k * p(1)) * exp(p(2));
+   return (5*k*k - 1) * sin(k * p(0)) * cos(2 * k * p(1)) * exp(p(2));
    */
   
-     
+   
    double radius = sqrt((p(0)-0.5) * (p(0)-0.5) + p(1) * p(1));
    double phi;
    double alpha = 1.0/2.0;
@@ -452,6 +453,8 @@ double rhs_func(const Vector &p)
    {
       phi = atan2(p(1), (p(0)-0.5));
    }
+   
 
    return -2.0 * pow(radius, alpha) * sin(alpha * phi);
+   
 }
