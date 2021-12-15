@@ -77,7 +77,6 @@ void Problem<dim>::assemble_system()
                             update_values | update_gradients | update_quadrature_points | update_JxW_values);
 
     const unsigned int dofs_per_cell = fe.n_dofs_per_cell();
-    const unsigned int n_q_points = quadrature_formula.size();
 
     FullMatrix<double> cell_matrix(dofs_per_cell, dofs_per_cell);
     Vector<double> cell_rhs(dofs_per_cell);
@@ -123,8 +122,9 @@ void Problem<dim>::assemble_system()
 
     system_matrix.compress(VectorOperation::add);
     system_rhs.compress(VectorOperation::add);
+
     std::map<types::global_dof_index, double> boundary_values;
-    VectorTools::interpolate_boundary_values(dof_handler, 0, Functions::ZeroFunction<dim>(dim), boundary_values);
+    VectorTools::interpolate_boundary_values(dof_handler, 0, Functions::ZeroFunction<dim>(), boundary_values);
     MatrixTools::apply_boundary_values(boundary_values, system_matrix, solution, system_rhs, false);
 }
 
