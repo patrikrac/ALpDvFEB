@@ -8,11 +8,16 @@ The classes defined here can be modified in order to solve each specific Problem
 
 using namespace dealii;
 
-int main(int argc, char * argv[])
+int main(int argc, char *argv[])
 {
     Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
+    if (argc != 3)
+    {
+        std::cout << "Usage: ./deal_general order max_dofs" << std::endl;
+        return -1;
+    }
 
-    Problem<3> l;
+    Problem<3> l(std::atoi(argv[1]), std::atoi(argv[2]));
     l.run();
     return 0;
 }
