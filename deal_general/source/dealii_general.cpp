@@ -22,8 +22,8 @@ int main(int argc, char **argv)
     }
     else 
     {
-        //problem_hp::ProblemHP<3> l(std::atoi(argv[2]));
-        //l.run();
+        problem_hp::ProblemHP<3> l(std::atoi(argv[2]));
+        l.run();
         return 0;
     }
 }
