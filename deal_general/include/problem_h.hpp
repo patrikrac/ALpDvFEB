@@ -439,7 +439,8 @@ namespace problem_h
     {
 
         int cycle = 0;
-        make_grid() while (true)
+        make_grid();
+        while (true)
         {
             if (this_mpi_process == 0)
             {
