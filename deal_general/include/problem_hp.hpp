@@ -26,7 +26,7 @@ private:
     void output_vtk(const unsigned int cycle);
     void output_results();
 
-    int max_iterations;
+    int max_dofs;
 
     Triangulation<dim> triangulation;
 
