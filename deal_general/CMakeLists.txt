@@ -11,7 +11,7 @@ SET(TARGET "dealii_general")
 # you may want to either replace the following statement by something like
 FILE(GLOB_RECURSE TARGET_SRC  "source/*.cpp")
 FILE(GLOB_RECURSE TARGET_INC  "include/*.h")
-SET(TARGET_SRC ${TARGET_SRC}  ${TARGET_INC})
+SET(TARGET_SRC ${TARGET_INC} ${TARGET_SRC})
 # or switch altogether to the large project CMakeLists.txt file discussed
 # in the "CMake in user projects" page accessible from the "User info"
 # page of the documentation.
