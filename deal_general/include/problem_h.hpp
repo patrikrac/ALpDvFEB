@@ -15,7 +15,7 @@ template <int dim>
 class Problem
 {
 public:
-    Problem();
+    Problem(int, int);
     void run();
 
 private:
@@ -28,6 +28,8 @@ private:
     void calculate_exact_error(const unsigned int cycle);
     void output_results(const unsigned int cycle) const;
     void output_error();
+
+    int max_dofs;
 
     MPI_Comm mpi_communicator;
     const unsigned int n_mpi_processes;

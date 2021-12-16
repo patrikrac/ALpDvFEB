@@ -1,4 +1,25 @@
 #include "../include/problem_h.hpp"
+#include "../include/Timer.hpp"
+
+/**********
+ * Wrapper around the timer functions that are given.
+ * */
+timing::Timer timer;
+// Starts or resets the current clock.
+void startTimer()
+{
+    timer.reset();
+}
+// prints the current value of the clock
+double printTimer()
+{
+    double time = timer.elapsed();
+    std::cout << "Calculation took " << time << " seconds." << std::endl;
+    return time;
+}
+/**
+ * End of time wrapper functions
+ *********/
 
 using namespace dealii;
 //------------------------------
@@ -6,11 +27,11 @@ using namespace dealii;
 //The dof_handler manages enumeration and indexing of all degrees of freedom (relating to the given triangulation)
 //------------------------------
 template <int dim>
-Problem<dim>::Problem() : mpi_communicator(MPI_COMM_WORLD),
+Problem<dim>::Problem(int order, int max_dof) : max_dofs(max_dof), mpi_communicator(MPI_COMM_WORLD),
                           n_mpi_processes(Utilities::MPI::n_mpi_processes(mpi_communicator)),
                           this_mpi_process(Utilities::MPI::this_mpi_process(mpi_communicator)),
                           pcout(std::cout, (this_mpi_process == 0)),
-                          fe(2),
+                          fe(order),
                           dof_handler(triangulation),
                           postprocessor1(Point<dim>(0.125, 0.125, 0.125)),
                           postprocessor2(Point<dim>(0.25, 0.25, 0.25)),
@@ -361,29 +382,30 @@ void Problem<dim>::run()
 {
 
     int cycle = 0;
+    make_grid()
     while (true)
-    {
-        if (cycle == 0)
-        {
-            make_grid();
-        }
-        else
-        {
-            refine_grid();
+    {   
+        if(this_mpi_process == 0) {
+            startTimer();
         }
         setup_system();
         assemble_system();
         solve();
+        if(this_mpi_process == 0) {
+            printTimer();
+        }
 
         //calculate_exact_error(cycle);
         pcout << "Cycle " << cycle << std::endl;
+        pcout << "DOFs: " << get_n_dof() << std::endl;
         output_results(cycle);
-        //Netgen similar condition to reach desired number of degrees of freedom
-        if (get_n_dof() > 100000)
+        //Condition to reach desired number of degrees of freedom
+        if (get_n_dof() > max_dofs)
         {
             break;
         }
 
+        refine_grid();
         cycle++;
     }
 
