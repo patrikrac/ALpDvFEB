@@ -195,7 +195,7 @@ bool Problem::refine(BilinearForm &a, LinearForm &f, FiniteElementSpace &fespace
       return false;
    }
 
-   // 20. Update the space and interpolate the solution.
+   //Update the space and interpolate the solution.
    update(a, f, fespace, x, error_zero);
 
    return true;
@@ -387,7 +387,7 @@ void Problem::vtk_output(GridFunction &x, int &cycle)
 
    mesh.PrintVTK(output, 0);
    x.SaveVTK(output, "u", 0);
-   
+   output.flush();
    output.close();
 }
 
