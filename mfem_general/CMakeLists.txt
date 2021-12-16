@@ -2,7 +2,12 @@ cmake_minimum_required(VERSION 3.1)
 
 set(CMAKE_CXX_STANDARD 11)
 
-project(mfem_general)
+SET(TARGET "mfem_general")
+
+FILE(GLOB_RECURSE TARGET_SRC  "source/*.cpp")
+FILE(GLOB_RECURSE TARGET_INC  "include/*.hpp")
+
+project(${TARGET})
 
 #find_library(mfem_LIBRARY mfem REQUIRED)
 #find_path(mfem_INCLUDE_DIR NAMES mfem.hpp REQUIRED)
@@ -18,8 +23,8 @@ endif()
 enable_language(C)
 enable_language(CXX)
 
-add_executable(mfem_general mfem_general.cpp)
+add_executable(${TARGET} ${TARGET_SRC} ${TARGET_INC})
 
-target_include_directories(mfem_general PRIVATE ${MFEM_INCLUDE_DIRS})
-target_link_libraries(mfem_general PRIVATE ${MFEM_LIBRARIES})
+target_include_directories(${TARGET} PRIVATE ${MFEM_INCLUDE_DIRS})
+target_link_libraries(${TARGET} PRIVATE ${MFEM_LIBRARIES})
 
