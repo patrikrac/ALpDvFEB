@@ -302,3 +302,15 @@ void Problem::vtk_output(GridFunction &x, int &cycle)
     x.SaveVTK(output, "u", 0);
     output.close();
 }
+
+
+int main(int argc, char *argv[])
+{
+   if (argc != 3)
+  {
+    std::cout << "Usage: ./mfem_general order max_dofs" << std::endl;
+    return -1;
+  }
+   Problem l(std::atoi(argv[1]), std::atoi(argv[2]));
+   l.run();
+}

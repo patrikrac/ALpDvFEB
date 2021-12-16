@@ -4,11 +4,10 @@ set(CMAKE_CXX_STANDARD 11)
 
 SET(TARGET "mfem_general")
 
+project(${TARGET})
+
 FILE(GLOB_RECURSE TARGET_SRC  "source/*.cpp")
 FILE(GLOB_RECURSE TARGET_INC  "include/*.hpp")
-SET(TARGET_SRC ${TARGET_SRC})
-
-project(${TARGET})
 
 #find_library(mfem_LIBRARY mfem REQUIRED)
 #find_path(mfem_INCLUDE_DIR NAMES mfem.hpp REQUIRED)
@@ -24,7 +23,9 @@ endif()
 enable_language(C)
 enable_language(CXX)
 
-add_executable(${TARGET} ${TARGET_SRC})
+
+add_executable(${TARGET} ${TARGET_INC} ${TARGET_SRC})
+
 
 target_include_directories(${TARGET} PRIVATE ${MFEM_INCLUDE_DIRS})
 target_link_libraries(${TARGET} PRIVATE ${MFEM_LIBRARIES})
