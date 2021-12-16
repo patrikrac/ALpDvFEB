@@ -27,7 +27,7 @@ using namespace dealii;
 //The dof_handler manages enumeration and indexing of all degrees of freedom (relating to the given triangulation)
 //------------------------------
 template <int dim>
-Problem<dim>::Problem(int order, int iters) : max_iterations(iters), fe(order), dof_handler(triangulation), postprocessor1(Point<dim>(0.125, 0.125, 0.125)), postprocessor2(Point<dim>(0.25, 0.25, 0.25)), postprocessor3(Point<dim>(0.5, 0.5, 0.5))
+Problem<dim>::Problem(int order, int max_dof) : max_dofs(max_dof), fe(order), dof_handler(triangulation), postprocessor1(Point<dim>(0.125, 0.125, 0.125)), postprocessor2(Point<dim>(0.25, 0.25, 0.25)), postprocessor3(Point<dim>(0.5, 0.5, 0.5))
 {
 }
 
@@ -367,7 +367,7 @@ void Problem<dim>::run()
         vtk_output(cycle);
 
         //Netgen similar condition to reach desired number of degrees of freedom
-        if (get_n_dof() > max_iterations)
+        if (get_n_dof() > max_dofs)
         {
             break;
         }

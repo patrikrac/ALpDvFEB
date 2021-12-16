@@ -12,7 +12,7 @@ int main(int argc, char **argv)
 {
     if (argc < 3 || argc > 4)
     {
-        std::cout << "Usage: ./deal_general order max_iterations [-hp]" << std::endl;
+        std::cout << "Usage: ./deal_general order max_dofs [-hp]" << std::endl;
         return -1;
     }
 

@@ -27,7 +27,7 @@ using namespace dealii;
 //Set an adequate maximum degree.
 //------------------------------
 template <int dim>
-ProblemHP<dim>::ProblemHP(int iters) : max_iterations(iters), dof_handler(triangulation), max_degree(dim <= 2 ? 7 : 5), postprocessor1(Point<dim>(0.125, 0.125, 0.125)), postprocessor2(Point<dim>(0.25, 0.25, 0.25)), postprocessor3(Point<dim>(0.5, 0.5, 0.5))
+ProblemHP<dim>::ProblemHP(int max_dof) : max_dofs(max_dof), dof_handler(triangulation), max_degree(dim <= 2 ? 7 : 5), postprocessor1(Point<dim>(0.125, 0.125, 0.125)), postprocessor2(Point<dim>(0.25, 0.25, 0.25)), postprocessor3(Point<dim>(0.5, 0.5, 0.5))
 {
     for (unsigned int degree = 2; degree <= max_degree; degree++)
     {
@@ -405,7 +405,7 @@ void ProblemHP<dim>::run()
         vtk_output(cycle);
 
         //Condition to reach desired number of degrees of freedom
-        if (get_n_dof() > max_iterations)
+        if (get_n_dof() > max_dofs)
         {
             break;
         }
