@@ -1,5 +1,6 @@
 //Created by Patrik Rác
 //This file contains the problem definitions
+#pragma once
 
 using namespace mfem;
 // Exact solution, used for the Dirichlet BC.

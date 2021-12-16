@@ -1,5 +1,6 @@
 //Created by Patrik Rác
 //This file contains the cleasses and structs neccessary for evaluation
+#pragma once
 
 using namespace mfem;
 using namespace std;
