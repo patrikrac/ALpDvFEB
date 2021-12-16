@@ -181,6 +181,8 @@ void Problem::run()
 
         solve(a, f, fespace, x, ess_bdr, bdr);
 
+        printTimer();
+
         exact_error(step, fespace.GetNDofs(), x, error_zero, u);
 
         vtk_output(x, step);
@@ -190,7 +192,7 @@ void Problem::run()
         {
             break;
         }
-        printTimer();
+
         step++;
     }
 
