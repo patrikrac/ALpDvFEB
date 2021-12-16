@@ -387,7 +387,6 @@ void Problem::vtk_output(GridFunction &x, int &cycle)
 
    mesh.PrintVTK(output, 0);
    x.SaveVTK(output, "u", 0);
-   output.flush();
    output.close();
 }
 
