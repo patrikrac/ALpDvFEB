@@ -20,7 +20,7 @@ using namespace std;
 class Problem
 {
 public:
-   Problem(int order, int iters) : hysteresis(0), max_elem_error(1.0e-12), order(order), max_iters(iters),
+   Problem(int order, int max_dof) : hysteresis(0), max_elem_error(1.0e-12), order(order), max_dofs(max_dof),
                postprocessor1({0.125, 0.125, 0.125}), postprocessor2({0.25, 0.25, 0.25}), postprocessor3({0.5, 0.5, 0.5})
    {
    }
@@ -43,7 +43,7 @@ private:
    double hysteresis; //derefinement safety coefficient
    double max_elem_error;
    int order;
-   int max_iters;
+   int max_dofs;
    PointValueEvaluation postprocessor1, postprocessor2, postprocessor3;
 
    //Data parameters

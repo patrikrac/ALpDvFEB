@@ -188,7 +188,7 @@ void Problem::run()
         vtk_output(x, step);
 
         //Stop the loop if no more elements are marked for refinement or the desired number of DOFs is reached.
-        if (fespace.GetNDofs() > max_iters || !refine(a, f, fespace, x, error_zero, refiner))
+        if (fespace.GetNDofs() > max_dofs || !refine(a, f, fespace, x, error_zero, refiner))
         {
             break;
         }

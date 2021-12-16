@@ -8,7 +8,7 @@ int main(int argc, char *argv[])
 {
    if (argc != 3)
   {
-    std::cout << "Usage: ./mfem_general order max_iterations" << std::endl;
+    std::cout << "Usage: ./mfem_general order max_dofs" << std::endl;
     return -1;
   }
    Problem l(std::atoi(argv[1]), std::atoi(argv[2]));
