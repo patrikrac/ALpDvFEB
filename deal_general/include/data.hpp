@@ -113,7 +113,7 @@ double RHS_function<dim>::value(const Point<dim> &p, const unsigned int /*compon
 
     /*
     double k = 8.0;
-    return (k * k + 4 * k - 1) * sin(k * p(0)) * cos(2 * k * p(1)) * exp(p(2));
+    return (5*k*k- 1) * sin(k * p(0)) * cos(2 * k * p(1)) * exp(p(2));
     */
 
    /*
