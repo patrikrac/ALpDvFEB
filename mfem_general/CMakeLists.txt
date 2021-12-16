@@ -6,6 +6,7 @@ SET(TARGET "mfem_general")
 
 FILE(GLOB_RECURSE TARGET_SRC  "source/*.cpp")
 FILE(GLOB_RECURSE TARGET_INC  "include/*.hpp")
+SET(TARGET_SRC ${TARGET_SRC})
 
 project(${TARGET})
 
@@ -23,7 +24,7 @@ endif()
 enable_language(C)
 enable_language(CXX)
 
-add_executable(${TARGET} ${TARGET_SRC} ${TARGET_INC})
+add_executable(${TARGET} ${TARGET_SRC})
 
 target_include_directories(${TARGET} PRIVATE ${MFEM_INCLUDE_DIRS})
 target_link_libraries(${TARGET} PRIVATE ${MFEM_LIBRARIES})
