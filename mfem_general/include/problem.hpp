@@ -9,6 +9,7 @@
 
 #include "data.hpp"
 #include "evaluation.hpp"
+#pragma once
 
 using namespace mfem;
 using namespace std;
