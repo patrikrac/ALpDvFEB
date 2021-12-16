@@ -10,7 +10,7 @@ template <int dim>
 class ProblemHP
 {
 public:
-    ProblemHP();
+    ProblemHP(int);
     ~ProblemHP();
 
     void run();
@@ -23,7 +23,10 @@ private:
     void solve();
     void refine_grid();
     void calculate_exact_error(const unsigned int cycle);
+    void output_vtk(const unsigned int cycle);
     void output_results();
+
+    int max_iterations;
 
     Triangulation<dim> triangulation;
 
@@ -43,5 +46,8 @@ private:
     const unsigned int max_degree;
 
     ConvergenceTable convergence_table;
+    PointValueEvaluation<dim> postprocessor1;
+    PointValueEvaluation<dim> postprocessor2;
+    PointValueEvaluation<dim> postprocessor3;
     std::vector<metrics> convergence_vector;
 };

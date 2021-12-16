@@ -41,7 +41,8 @@ double PointValueEvaluation<dim>::operator()(const DoFHandler<dim> &dof_handler,
 //Metrics to be collected fot later plots or diagramms
 typedef struct metrics
 {
-    double error;
+    double max_error;
+    double l2_error;
     double relative_error;
     double error_p1;
     double error_p2;

@@ -15,7 +15,7 @@ template <int dim>
 class Problem
 {
 public:
-    Problem();
+    Problem(int, int);
     void run();
 
 private:
@@ -26,7 +26,10 @@ private:
     void solve();
     void refine_grid();
     void calculate_exact_error(const unsigned int cycle);
+    void output_vtk(const unsigned int cycle);
     void output_results();
+
+    int max_iterations;
 
     Triangulation<dim> triangulation;
     FE_Q<dim> fe;

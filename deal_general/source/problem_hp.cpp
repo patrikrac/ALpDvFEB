@@ -1,4 +1,25 @@
 #include "../include/problem_hp.hpp"
+#include "../include/Timer.hpp"
+
+/**********
+ * Wrapper around the timer functions that are given.
+ * */
+timing::Timer timer;
+// Starts or resets the current clock.
+void startTimer()
+{
+    timer.reset();
+}
+// prints the current value of the clock
+double printTimer()
+{
+    double time = timer.elapsed();
+    std::cout << "Calculation took " << time << " seconds." << std::endl;
+    return time;
+}
+/**
+ * End of time wrapper functions
+ *********/
 
 using namespace dealii;
 //------------------------------
@@ -6,7 +27,7 @@ using namespace dealii;
 //Set an adequate maximum degree.
 //------------------------------
 template <int dim>
-ProblemHP<dim>::ProblemHP() : dof_handler(triangulation), max_degree(dim <= 2 ? 7 : 5)
+ProblemHP<dim>::ProblemHP(int iters) : max_iterations(iters), dof_handler(triangulation), max_degree(dim <= 2 ? 7 : 5), postprocessor1(Point<dim>(0.125, 0.125, 0.125)), postprocessor2(Point<dim>(0.25, 0.25, 0.25)), postprocessor3(Point<dim>(0.5, 0.5, 0.5))
 {
     for (unsigned int degree = 2; degree <= max_degree; degree++)
     {
@@ -185,67 +206,123 @@ void ProblemHP<dim>::refine_grid()
 }
 
 //------------------------------
-//Output the result using a vtk file format
+//Print the mesh and the solution in a vtk file
+//------------------------------
+template <int dim>
+void ProblemHP<dim>::output_vtk(const unsigned int cycle)
+{
+    std::ofstream output("solution-" + std::to_string(cycle) + ".vtk");
+    DataOut<dim> data_out;
+
+    data_out.attach_dof_handler(dof_handler);
+    data_out.add_data_vector(solution, "u");
+    data_out.build_patches();
+
+    data_out.write_vtk(output);
+}
+
+//------------------------------
+//Output the result using a custiom file format
 //------------------------------
 template <int dim>
 void ProblemHP<dim>::output_results()
 {
-    DataOut<dim> data_out;
-
-    Vector<float> fe_degrees(triangulation.n_active_cells());
-    for (const auto &cell : dof_handler.active_cell_iterators())
-    {
-        fe_degrees(cell->active_cell_index()) = fe_collection[cell->active_fe_index()].degree;
-    }
-
-    data_out.attach_dof_handler(dof_handler);
-    data_out.add_data_vector(solution, "u");
-    data_out.add_data_vector(fe_degrees, "fe_degree");
-
-    data_out.build_patches();
-
-    std::ofstream output("solution.vtk");
-    data_out.write_vtk(output);
-
     convergence_table.set_precision("Linfty", 3);
-    convergence_table.set_precision("relativeLinfty", 3);
+    convergence_table.set_precision("L2", 3);
+    convergence_table.set_precision("error_p1", 3);
+    convergence_table.set_precision("error_p2", 3);
+    convergence_table.set_precision("error_p3", 3);
     convergence_table.set_scientific("Linfty", true);
-    convergence_table.set_scientific("relativeLinfty", true);
+    convergence_table.set_scientific("L2", true);
+    convergence_table.set_scientific("error_p1", true);
+    convergence_table.set_scientific("error_p2", true);
+    convergence_table.set_scientific("error_p3", true);
 
     convergence_table.set_tex_caption("cells", "\\# cells");
     convergence_table.set_tex_caption("dofs", "\\# dofs");
-    convergence_table.set_tex_caption("Linfty", "$L^\\infty$");
-    convergence_table.set_tex_caption("relativeLinfty", "relative");
+    convergence_table.set_tex_caption("Linfty", "$\\left\\|u_h - I_hu\\right\\| _{L^\\infty}$");
+    convergence_table.set_tex_caption("L2", "$\\left\\|u_h - I_hu\\right\\| _{L^2}}$");
+    convergence_table.set_tex_caption("error_p1", "$\\left\\|u_h(x_1) - I_hu(x_1)\\right\\| $");
+    convergence_table.set_tex_caption("error_p2", "$\\left\\|u_h(x_2) - I_hu(x_2)\\right\\| $");
+    convergence_table.set_tex_caption("error_p3", "$\\left\\|u_h(x_3) - I_hu(x_3)\\right\\| $");
 
     std::ofstream error_table_file("error.tex");
     convergence_table.write_tex(error_table_file);
 
-    std::ofstream output_custom("error_deal2.txt");
-
-    output_custom << "$deal.ii$" << std::endl;
-    output_custom << "$n_\\text{dof}$" << std::endl;
-    output_custom << "$\\left\\|u - u_h\\right\\| _{L^\\infty}$" << std::endl;
-    output_custom << convergence_vector.size() << std::endl;
+    std::ofstream output_customMax("error_max_dealii.txt");
+    output_customMax << "$deal.ii$" << std::endl;
+    output_customMax << "$n_\\text{dof}$" << std::endl;
+    output_customMax << "$\\left\\|u_h - I_hu\\right\\| $" << std::endl;
+    output_customMax << convergence_vector.size() << std::endl;
     for (size_t i = 0; i < convergence_vector.size(); i++)
     {
-        output_custom << convergence_vector[i].n_dofs << " " << convergence_vector[i].error << std::endl;
+        output_customMax << convergence_vector[i].n_dofs << " " << convergence_vector[i].max_error << std::endl;
     }
+    output_customMax.close();
+
+    std::ofstream output_customL2("error_l2_dealii.txt");
+    output_customL2 << "$deal.ii$" << std::endl;
+    output_customL2 << "$n_\\text{dof}$" << std::endl;
+    output_customL2 << "$\\left\\|u_h - I_hu\\right\\| $" << std::endl;
+    output_customL2 << convergence_vector.size() << std::endl;
+    for (size_t i = 0; i < convergence_vector.size(); i++)
+    {
+        output_customL2 << convergence_vector[i].n_dofs << " " << convergence_vector[i].max_error << std::endl;
+    }
+    output_customL2.close();
+
+    std::ofstream output_custom1("error_dealii_p1.txt");
+
+    output_custom1 << "$\\left\\|u_h(x_1) - I_hu(x_1)\\right\\| $" << std::endl;
+    output_custom1 << "$n_\\text{dof}$" << std::endl;
+    output_custom1 << "$\\left\\|u_h(x) - I_hu(x)\\right\\|$" << std::endl;
+    output_custom1 << convergence_vector.size() << std::endl;
+    for (size_t i = 0; i < convergence_vector.size(); i++)
+    {
+        output_custom1 << convergence_vector[i].n_dofs << " " << convergence_vector[i].error_p1 << std::endl;
+    }
+    output_custom1.close();
+
+    std::ofstream output_custom2("error_dealii_p2.txt");
+
+    output_custom2 << "$\\left\\|u_h(x_2) - I_hu(x_2)\\right\\|$" << std::endl;
+    output_custom2 << "$n_\\text{dof}$" << std::endl;
+    output_custom2 << "$\\left\\|u_h(x) - I_hu(x)\\right\\| $" << std::endl;
+    output_custom2 << convergence_vector.size() << std::endl;
+    for (size_t i = 0; i < convergence_vector.size(); i++)
+    {
+        output_custom2 << convergence_vector[i].n_dofs << " " << convergence_vector[i].error_p2 << std::endl;
+    }
+    output_custom2.close();
+
+    std::ofstream output_custom3("error_dealii_p3.txt");
+
+    output_custom3 << "$\\left\\|u_h(x_3) - I_hu(x_3)\\right\\|$" << std::endl;
+    output_custom3 << "$n_\\text{dof}$" << std::endl;
+    output_custom3 << "$\\left\\|u_h(x) - I_hu(x)\\right\\| $" << std::endl;
+    output_custom3 << convergence_vector.size() << std::endl;
+    for (size_t i = 0; i < convergence_vector.size(); i++)
+    {
+        output_custom3 << convergence_vector[i].n_dofs << " " << convergence_vector[i].error_p3 << std::endl;
+    }
+    output_custom3.close();
 }
 
-//-------------------------------------------------------------
-//Calculate the exact error using the Solution class at the given cycle
-//-------------------------------------------------------------
+//----------------------------------------------------------------
+//Calculate the exact error usign the solution class.
+//----------------------------------------------------------------
 template <int dim>
 void ProblemHP<dim>::calculate_exact_error(const unsigned int cycle)
 {
     Vector<float> difference_per_cell(triangulation.n_active_cells());
 
     const QTrapezoid<1> q_trapez;
+    const QIterated<dim> q_iterated(q_trapez, fe.degree * 2 + 1);
     VectorTools::integrate_difference(dof_handler,
                                       solution,
                                       Solution<dim>(),
                                       difference_per_cell,
-                                      quadrature_collection,
+                                      q_iterated,
                                       VectorTools::Linfty_norm);
     const double Linfty_error = VectorTools::compute_global_error(triangulation, difference_per_cell, VectorTools::Linfty_norm);
 
@@ -256,30 +333,50 @@ void ProblemHP<dim>::calculate_exact_error(const unsigned int cycle)
                                       zero_vector,
                                       Solution<dim>(),
                                       difference_per_cell,
-                                      quadrature_collection,
+                                      q_iterated,
                                       VectorTools::Linfty_norm);
-
     const double Linfty_norm = VectorTools::compute_global_error(triangulation, difference_per_cell, VectorTools::Linfty_norm);
+
+    VectorTools::integrate_difference(dof_handler,
+                                      solution,
+                                      Solution<dim>(),
+                                      difference_per_cell,
+                                      QGauss<dim>(fe->degree + 1),
+                                      VectorTools::L2_norm);
+    const double L2_error = VectorTools::compute_global_error(triangulation, difference_per_cell, VectorTools::L2_norm);
 
     const double relative_Linfty_error = Linfty_error / Linfty_norm;
 
     const unsigned int n_active_cells = triangulation.n_active_cells();
     const unsigned int n_dofs = dof_handler.n_dofs();
 
+    double error_p1 = abs(postprocessor1(dof_handler, solution) - Solution<dim>().value(Point<dim>(0.125, 0.125, 0.125)));
+    double error_p2 = abs(postprocessor2(dof_handler, solution) - Solution<dim>().value(Point<dim>(0.25, 0.25, 0.25)));
+    double error_p3 = abs(postprocessor3(dof_handler, solution) - Solution<dim>().value(Point<dim>(0.5, 0.5, 0.5)));
+
     std::cout << "Cycle " << cycle << ':' << std::endl
               << "   Number of active cells:       " << n_active_cells
               << std::endl
-              << "   Number of degrees of freedom: " << n_dofs << std::endl;
+              << "   Number of degrees of freedom: " << n_dofs << std::endl
+              << "Max error: " << Linfty_error << std::endl
+              << "L2 error: " << L2_error << std::endl;
 
     convergence_table.add_value("cycle", cycle);
     convergence_table.add_value("cells", n_active_cells);
     convergence_table.add_value("dofs", n_dofs);
     convergence_table.add_value("Linfty", Linfty_error);
-    convergence_table.add_value("relativeLinfty", relative_Linfty_error);
+    convergence_table.add_value("L2", L2_error);
+    convergence_table.add_value("error_p1", error_p1);
+    convergence_table.add_value("error_p2", error_p2);
+    convergence_table.add_value("error_p3", error_p3);
 
     metrics values = {};
-    values.error = Linfty_error;
+    values.max_error = Linfty_error;
+    values.l2_error = L2_error;
     values.relative_error = relative_Linfty_error;
+    values.error_p1 = error_p1;
+    values.error_p2 = error_p2;
+    values.error_p3 = error_p3;
     values.n_dofs = n_dofs;
     values.cycle = cycle;
 
@@ -294,27 +391,26 @@ void ProblemHP<dim>::run()
 {
 
     int cycle = 0;
+    make_grid();
     while (true)
     {
-        if (cycle == 0)
-        {
-            make_grid();
-        }
-        else
-        {
-            refine_grid();
-        }
+        startTimer();
+
         setup_system();
         assemble_system();
         solve();
-
+        
+        printTimer();
         calculate_exact_error(cycle);
+        vtk_output(cycle);
 
-        //Netgen similar condition to reach desired number of degrees of freedom
-        if (get_n_dof() > 1000000)
+        //Condition to reach desired number of degrees of freedom
+        if (get_n_dof() > max_iterations)
         {
             break;
         }
+
+        refine_grid();
 
         cycle++;
     }

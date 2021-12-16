@@ -8,9 +8,24 @@ The classes defined here can be modified in order to solve each specific Problem
 
 using namespace dealii;
 
-int main(void)
+int main(int argc, char **argv)
 {
-    Problem<3> l;
-    l.run();
-    return 0;
+    if (argc < 3 || argc > 4)
+    {
+        std::cout << "Usage: ./deal_general order max_iterations [-hp]" << std::endl;
+        return -1;
+    }
+
+    if (argc == 3)
+    {
+        Problem<3> l(std::atoi(argv[1]), std::atoi(argv[2]));
+        l.run();
+        return 0;
+    }
+    else 
+    {
+        ProblemHP<3> l(std::atoi(argv[2]));
+        l.run();
+        return 0;
+    }
 }
