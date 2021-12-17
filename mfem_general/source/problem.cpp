@@ -80,13 +80,18 @@ void Problem::solve(BilinearForm &a, LinearForm &f, FiniteElementSpace &fespace,
     Array<int> ess_tdof_list;
     fespace.GetEssentialTrueDofs(ess_bdr, ess_tdof_list);
 
-    SparseMatrix A;
+    HypreParMatrix A;
     Vector B, X;
 
     a.FormLinearSystem(ess_tdof_list, x, f, A, X, B);
 
-    GSSmoother M(A);
-    PCG(A, M, B, X, 0, 500, 1e-12, 0.0);
+    HypreSolver *amg = new HypreBoomerAMG (A);
+    HyprePCG *pcg = new HyprePCG(A);
+    pcg ->SetTol(1e-12);
+    pcg ->SetMaxIter(200);
+    pcg ->SetPrintLevel(2);
+    pcg ->SetPreconditioner(*amg);
+    pcg ->Mult(B, X);
 
     a.RecoverFEMSolution(X, f, x);
 }
