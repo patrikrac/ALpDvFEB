@@ -96,13 +96,13 @@ void Problem::solve(BilinearForm &a, LinearForm &f, FiniteElementSpace &fespace,
 //----------------------------------------------------------------
 bool Problem::refine(BilinearForm &a, LinearForm &f, FiniteElementSpace &fespace, GridFunction &x, GridFunction &error_zero, ThresholdRefiner &refiner)
 {
-    //refiner.Apply(mesh);
+    refiner.Apply(mesh);
 
-    /*if (refiner.Stop())
+    if (refiner.Stop())
     {
         return false;
-    }*/
-    mesh.UniformRefinement();
+    }
+
     //Update the space and interpolate the solution.
     update(a, f, fespace, x, error_zero);
 
