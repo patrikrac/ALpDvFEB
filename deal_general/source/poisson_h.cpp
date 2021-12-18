@@ -19,7 +19,7 @@ namespace AspDEQuFEL
     // Starts or resets the current clock.
     //--------------------------------
     template <int dim>
-    Poisson<dim>::void startTimer()
+    void Poisson<dim>::startTimer()
     {
         timer.reset();
     }
@@ -28,7 +28,7 @@ namespace AspDEQuFEL
     // Prints the current value of the clock
     //--------------------------------
     template <int dim>
-    Poisson<dim>::double printTimer()
+    double Poisson<dim>::printTimer()
     {
         double time = timer.elapsed();
         std::cout << "Calculation took " << time << " seconds." << std::endl;

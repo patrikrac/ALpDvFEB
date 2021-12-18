@@ -34,7 +34,7 @@ namespace AspDEQuFEL
     //Start the timer
     //------------------------------
     template <int dim>
-    PoissonHP<dim>::void startTimer()
+    void PoissonHP<dim>::startTimer()
     {
         timer.reset();
     }
@@ -43,7 +43,7 @@ namespace AspDEQuFEL
     // Prints the current value of the clock
     //------------------------------
     template <int dim>
-    PoissonHP<dim>::double printTimer()
+    double PoissonHP<dim>::printTimer()
     {
         double time = timer.elapsed();
         std::cout << "Calculation took " << time << " seconds." << std::endl;
