@@ -3,8 +3,10 @@ Created by Patrik Rac
 Programm solving a partial differential equation of arbitrary dimensionality using the functionality of the deal.ii FE-library.
 The classes defined here can be modified in order to solve each specific Problem.
 ---------------------------------------------------------------- */
-#include "../include/problem_h.hpp"
-#include "../include/problem_hp.hpp"
+#include "poisson_h.hpp"
+#include "poisson_hp.hpp"
+
+#include <stdio.h>
 
 int main(int argc, char **argv)
 {
@@ -16,13 +18,13 @@ int main(int argc, char **argv)
 
     if (argc == 3)
     {
-        problem_h::Problem<3> l(std::atoi(argv[1]), std::atoi(argv[2]));
+        AspDEQuFEL::Poisson<3> l(std::atoi(argv[1]), std::atoi(argv[2]));
         l.run();
         return 0;
     }
     else 
     {
-        problem_hp::ProblemHP<3> l(std::atoi(argv[2]));
+        AspDEQuFEL::PoissonHP<3> l(std::atoi(argv[2]));
         l.run();
         return 0;
     }
