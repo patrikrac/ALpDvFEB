@@ -36,7 +36,10 @@ The classes defined here can be modified in order to solve each specific Problem
 
 #include "evaluation.hpp"
 #include "problem.hpp"
+
+#ifdef USE_TIMING
 #include "Timer.hpp"
+#endif
 #pragma once
 
 namespace AspDEQuFEL
@@ -64,12 +67,14 @@ namespace AspDEQuFEL
         void output_vtk(const unsigned int cycle);
         void output_results();
 
+#ifdef USE_TIMING
         void startTimer();
         double printTimer();
 
-        int max_dofs;
-
         timing::Timer timer;
+#endif
+
+        int max_dofs;
 
         Triangulation<dim> triangulation;
         FE_Q<dim> fe;
@@ -99,6 +104,7 @@ namespace AspDEQuFEL
     {
     }
 
+#ifdef USE_TIMING
     //--------------------------------
     // Starts or resets the current clock.
     //--------------------------------
@@ -118,7 +124,7 @@ namespace AspDEQuFEL
         std::cout << "Calculation took " << time << " seconds." << std::endl;
         return time;
     }
-
+#endif
     //------------------------------
     //Construct the Grid the problem is beeing solved on.
     //Define the default coarsaty / refinement of the grid
@@ -443,16 +449,22 @@ namespace AspDEQuFEL
         make_grid();
         while (true)
         {
+#ifdef USE_TIMING
             startTimer();
+#endif
 
             setup_system();
             assemble_system();
             solve();
 
+#ifdef USE_TIMING
             printTimer();
+#endif
 
+#ifdef USE_OUTPUT
             calculate_exact_error(cycle);
             output_vtk(cycle);
+#endif
 
             //Netgen similar condition to reach desired number of degrees of freedom
             if (get_n_dof() > max_dofs)
@@ -464,7 +476,9 @@ namespace AspDEQuFEL
 
             cycle++;
         }
-
+        
+#ifdef USE_OUTPUT
         output_results();
+#endif
     }
 }

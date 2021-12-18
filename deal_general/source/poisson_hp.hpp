@@ -39,7 +39,10 @@
 
 #include "evaluation.hpp"
 #include "problem.hpp"
+
+#ifdef USE_TIMING
 #include "Timer.hpp"
+#endif
 #pragma once
 
 namespace AspDEQuFEL
@@ -68,12 +71,14 @@ namespace AspDEQuFEL
         void output_vtk(const unsigned int cycle);
         void output_results();
 
+#ifdef USE_TIMING
         void startTimer();
         double printTimer();
 
-        int max_dofs;
+        timing::Timer timer;
+#endif
 
-        timing::Timer timer; 
+        int max_dofs;
 
         Triangulation<dim> triangulation;
 
@@ -99,8 +104,7 @@ namespace AspDEQuFEL
         std::vector<metrics> convergence_vector;
     };
 
-
-     //------------------------------
+    //------------------------------
     //The dof_handler manages enumeration and indexing of all degrees of freedom (relating to the given triangulation).
     //Set an adequate maximum degree.
     //------------------------------
@@ -124,6 +128,7 @@ namespace AspDEQuFEL
         dof_handler.clear();
     }
 
+#ifdef USE_TIMING
     //------------------------------
     //Start the timer
     //------------------------------
@@ -143,6 +148,7 @@ namespace AspDEQuFEL
         std::cout << "Calculation took " << time << " seconds." << std::endl;
         return time;
     }
+#endif
 
     //------------------------------
     //Construct the Grid the ProblemHP is beeing solved on.
@@ -491,15 +497,20 @@ namespace AspDEQuFEL
         make_grid();
         while (true)
         {
+#ifdef USE_TIMING
             startTimer();
-
+#endif
             setup_system();
             assemble_system();
             solve();
 
+#ifdef USE_TIMING
             printTimer();
+#endif
+#ifdef USE_OUTPUT
             calculate_exact_error(cycle);
             output_vtk(cycle);
+#endif
 
             //Condition to reach desired number of degrees of freedom
             if (get_n_dof() > max_dofs)
@@ -511,7 +522,8 @@ namespace AspDEQuFEL
 
             cycle++;
         }
-
+#ifdef USE_OUTPUT
         output_results();
+#endif
     }
 }

@@ -17,6 +17,9 @@ SET(TARGET_SRC ${TARGET_SRC} ${TARGET_INC} )
 # page of the documentation.
 #SET(TARGET_SRC ${TARGET}.cpp)
 
+option ( USE_TIMING "ENABLE TIME MEASUREMENTS" ON )
+option ( USE_OUTPUT "ENABLE DATA OUTPUT" ON )
+
 # Usually, you will not need to modify anything beyond this point...
 
 CMAKE_MINIMUM_REQUIRED(VERSION 3.1.0)
@@ -35,3 +38,11 @@ ENDIF()
 DEAL_II_INITIALIZE_CACHED_VARIABLES()
 PROJECT(${TARGET})
 DEAL_II_INVOKE_AUTOPILOT()
+
+if ( USE_TIMING )
+  target_compile_definitions( ${TARGET} PRIVATE "-DUSE_TIMING" )
+endif()
+
+if ( USE_OUTPUT )
+  target_compile_definitions( ${TARGET} PRIVATE "-DUSE_OUTPUT" )
+endif()
