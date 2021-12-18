@@ -7,7 +7,7 @@ SET(TARGET "mfem_general")
 project(${TARGET})
 
 FILE(GLOB_RECURSE TARGET_SRC  "source/*.cpp")
-FILE(GLOB_RECURSE TARGET_INC  "include/*.hpp")
+FILE(GLOB_RECURSE TARGET_INC  "source/*.hpp")
 
 #find_library(mfem_LIBRARY mfem REQUIRED)
 #find_path(mfem_INCLUDE_DIR NAMES mfem.hpp REQUIRED)
