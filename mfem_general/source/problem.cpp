@@ -1,8 +1,8 @@
 //Created by Patrik Rác
-//Implementation of the problem defintitions
+//Implementation of the problem defintitions containing the dirichlet boundary condition, as well as the right hand side function.
 #include "problem.hpp"
 
-// Exact solution, used for the Dirichlet BC.
+// Exact solution, used for the dirichlet BC.
 double bdr_func(const Vector &p)
 {
    

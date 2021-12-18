@@ -1,5 +1,7 @@
 //Created by Patrik Rác
 //This file contains the class definition for the problem
+//Definition of the Poisson class containing the necessarystructures to silve the problem using the MFEM Library
+//The class is written inside the AspDEQuFEL namespace
 #include "mfem.hpp"
 
 #include <vector>

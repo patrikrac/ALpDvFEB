@@ -1,11 +1,14 @@
 //Created by Patrik Rác
 //Source for the Poisson class
 #include "poisson.hpp"
+
+#ifdef USE_TIMING
 #include "Timer.hpp"
+#endif
 
 namespace AspDEQuFEL
 {
-
+#ifdef USE_TIMING
     /**********
  * Wrapper around the timer functions that are given.
  * */
@@ -25,6 +28,7 @@ namespace AspDEQuFEL
     /**
  * End of time wrapper functions
  *********/
+#endif
 
     using namespace mfem;
     using namespace std;
@@ -163,14 +167,9 @@ namespace AspDEQuFEL
         refiner.SetLocalErrorGoal(max_elem_error);
         refiner.SetNCLimit(0);
 
-        //ThresholdDerefiner derefiner(*estimator);
-        //derefiner.SetThreshold(hysteresis * max_elem_error);
-        //derefiner.SetNCLimit(0);
-
         x = 0.0;
 
         refiner.Reset();
-        //derefiner.Reset();
 
         int step = 0;
         while (true)
@@ -179,15 +178,20 @@ namespace AspDEQuFEL
             cout << "Step: " << step << endl
                  << "DOF: " << fespace.GetNDofs() << endl;
 
+#ifdef USE_TIMING
             startTimer();
+#endif
 
             solve(a, f, fespace, x, ess_bdr, bdr);
 
+#ifdef USE_TIMING
             printTimer();
+#endif
 
+#ifdef USE_OUTPUT
             exact_error(step, fespace.GetNDofs(), x, error_zero, u);
-
             vtk_output(x, step);
+#endif
 
             //Stop the loop if no more elements are marked for refinement or the desired number of DOFs is reached.
             if (fespace.GetNDofs() > max_dofs || !refine(a, f, fespace, x, error_zero, refiner))
@@ -206,7 +210,9 @@ namespace AspDEQuFEL
 
         delete estimator;
 
+#ifdef USE_OUTPUT
         output_table();
+#endif
     }
 
     //----------------------------------------------------------------

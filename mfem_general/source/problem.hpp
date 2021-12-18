@@ -1,5 +1,5 @@
 //Created by Patrik Rác
-//This file contains the problem definitions
+//Header for the problem definition of the poisson equation
 #include "mfem.hpp"
 #pragma once
 
