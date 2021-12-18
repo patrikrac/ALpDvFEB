@@ -35,6 +35,7 @@ The classes defined here can be modified in order to solve each specific Problem
 #include <math.h>
 
 #include "evaluation.hpp"
+#include "Timer.hpp"
 #pragma once
 
 namespace AspDEQuFEL
@@ -62,7 +63,12 @@ namespace AspDEQuFEL
         void output_vtk(const unsigned int cycle);
         void output_results();
 
+        void startTimer();
+        double printTimer();
+
         int max_dofs;
+
+        timing::Timer timer;
 
         Triangulation<dim> triangulation;
         FE_Q<dim> fe;

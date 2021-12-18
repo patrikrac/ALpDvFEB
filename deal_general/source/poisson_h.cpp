@@ -2,30 +2,9 @@
 //Implementation of the Poisson problem solver using h-refinement using the deal.ii library.
 #include "poisson_h.hpp"
 #include "problem.hpp"
-#include "Timer.hpp"
 
 namespace AspDEQuFEL
 {
-    /**********
- * Wrapper around the timer functions that are given.
- * */
-    timing::Timer timer;
-    // Starts or resets the current clock.
-    void startTimer()
-    {
-        timer.reset();
-    }
-    // prints the current value of the clock
-    double printTimer()
-    {
-        double time = timer.elapsed();
-        std::cout << "Calculation took " << time << " seconds." << std::endl;
-        return time;
-    }
-    /**
- * End of time wrapper functions
- *********/
-
     using namespace dealii;
     //------------------------------
     //Initialize the problem with first order finite elements
@@ -34,6 +13,26 @@ namespace AspDEQuFEL
     template <int dim>
     Poisson<dim>::Poisson(int order, int max_dof) : max_dofs(max_dof), fe(order), dof_handler(triangulation), postprocessor1(Point<dim>(0.125, 0.125, 0.125)), postprocessor2(Point<dim>(0.25, 0.25, 0.25)), postprocessor3(Point<dim>(0.5, 0.5, 0.5))
     {
+    }
+
+    //--------------------------------
+    // Starts or resets the current clock.
+    //--------------------------------
+    template <int dim>
+    Poisson<dim>::void startTimer()
+    {
+        timer.reset();
+    }
+
+    //--------------------------------
+    // Prints the current value of the clock
+    //--------------------------------
+    template <int dim>
+    Poisson<dim>::double printTimer()
+    {
+        double time = timer.elapsed();
+        std::cout << "Calculation took " << time << " seconds." << std::endl;
+        return time;
     }
 
     //------------------------------

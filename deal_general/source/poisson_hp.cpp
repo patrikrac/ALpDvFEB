@@ -2,30 +2,9 @@
 //Implementation of the Poisson problem solver using hp-refinement
 #include "poisson_hp.hpp"
 #include "problem.hpp"
-#include "Timer.hpp"
 
 namespace AspDEQuFEL
 {
-    /**********
- * Wrapper around the timer functions that are given.
- * */
-    timing::Timer timer;
-    // Starts or resets the current clock.
-    void startTimer()
-    {
-        timer.reset();
-    }
-    // prints the current value of the clock
-    double printTimer()
-    {
-        double time = timer.elapsed();
-        std::cout << "Calculation took " << time << " seconds." << std::endl;
-        return time;
-    }
-    /**
- * End of time wrapper functions
- *********/
-
     using namespace dealii;
     //------------------------------
     //The dof_handler manages enumeration and indexing of all degrees of freedom (relating to the given triangulation).
@@ -49,6 +28,26 @@ namespace AspDEQuFEL
     PoissonHP<dim>::~PoissonHP()
     {
         dof_handler.clear();
+    }
+
+    //------------------------------
+    //Start the timer
+    //------------------------------
+    template <int dim>
+    PoissonHP<dim>::void startTimer()
+    {
+        timer.reset();
+    }
+
+    //------------------------------
+    // Prints the current value of the clock
+    //------------------------------
+    template <int dim>
+    PoissonHP<dim>::double printTimer()
+    {
+        double time = timer.elapsed();
+        std::cout << "Calculation took " << time << " seconds." << std::endl;
+        return time;
     }
 
     //------------------------------
