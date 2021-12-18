@@ -10,7 +10,7 @@ SET(TARGET "dealii_general")
 # to add other source files as well. If your project becomes much larger,
 # you may want to either replace the following statement by something like
 FILE(GLOB_RECURSE TARGET_SRC  "source/*.cpp")
-FILE(GLOB_RECURSE TARGET_INC  "include/*.hpp")
+FILE(GLOB_RECURSE TARGET_INC  "source/*.hpp")
 SET(TARGET_SRC ${TARGET_INC} ${TARGET_SRC})
 # or switch altogether to the large project CMakeLists.txt file discussed
 # in the "CMake in user projects" page accessible from the "User info"
