@@ -9,6 +9,7 @@ The program runns with the command "netgen ngsolve-general.py" or "python3.8 ngs
 """
 
 import sys
+import os
 from ngsolve import *
 from netgen.csg import *
 from netgen.geom2d import CSG2d, Rectangle
@@ -20,6 +21,8 @@ class Poisson:
         self.order = order
         self.max_dof = max_dof
         
+        #User concfiguration (Problem definition)
+         #=============================================
         #Define the general parameters and functions for the Problem
         #Define the parameter alpha which is dependant on the used geometry
         #self.alpha = 1.0/2.0
@@ -36,6 +39,10 @@ class Poisson:
         #self.uexact = (self.r**self.alpha)*sin(self.alpha*self.phi)*(z*z)
         self.uexact = exp(-10*(x+y))*(z*z)
 
+        #Define the right hand side of the poission problem
+        self.rhs = -(200*(z*z) + 2)*exp(-10*(x+y))
+        #=============================================
+        
         #Generate the mesh
         self.mesh = self.make_mesh()
 
@@ -100,10 +107,10 @@ class Poisson:
 
         #Define the Linear form corresponding to the given problem
         f = LinearForm(self.fes)
-        f += -(200*(z*z) + 2)*exp(-10*(x+y))*v*dx
+        f += self.rhs*v*dx
         
         #Define the solver to be used to solve the problem
-        c = Preconditioner(a, type = "bddc")
+        c = Preconditioner(a, type = "local")
 
         return (a,f,c)
     
@@ -124,7 +131,6 @@ class Poisson:
 
         # mark for refinement:
         maxerr = max(eta2)
-        print ("maxerr: ", maxerr)
 
         for el in self.mesh.Elements():
             self.mesh.SetRefinementFlag(el, eta2[el.nr] > 0.3*maxerr)
@@ -173,13 +179,13 @@ class Poisson:
 
         l2_error = sqrt(Integrate((self.gfu - self.uexact)*(self.gfu - self.uexact), self.mesh))
         values.append(l2_error)
-        print("L2-error: ", l2_error)
         
         l2_relative_error = sqrt(Integrate((self.gfu - self.uexact)*(self.gfu - self.uexact),self.mesh)) / sqrt(Integrate(self.uexact*self.uexact, self.mesh))
         values.append(l2_relative_error)
         
+        #Max error is calculated wrongly
+        #TODO: Fix implementation of error
         max_error = max(Integrate((self.gfu - self.uexact), self.mesh, VOL, element_wise=True))
-        print("Max-error: ",  max_error)
         values.append(max_error)       
 
         max_relative_error = max_error / max(Integrate(self.uexact,  self.mesh, VOL, element_wise=True))
@@ -276,13 +282,17 @@ class Poisson:
             print("Cycle: {}, DOFs: {}".format(cycle, self.fes.ndof))
             cycle += 1
             
-        self.output()
+        self.output_vtk(cycle)
         self.output_Table()
         
 
 
 if __name__ == "__main__":
     if len(sys.argv) == 3:
+        current_directory = os.getcwd()
+        result_directory = os.path.join(current_directory, r'output')
+        if not os.path.exists(result_directory):
+            os.makedirs(result_directory)
         e = Poisson(int(sys.argv[1]), int(sys.argv[2]))
         e.do()
     else:    
