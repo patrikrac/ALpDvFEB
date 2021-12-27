@@ -10,6 +10,7 @@ The program runns with the command "netgen ngsolve-general.py" or "python3.8 ngs
 
 import sys
 import os
+from typing import NamedTuple
 from ngsolve import *
 from netgen.csg import *
 from netgen.geom2d import CSG2d, Rectangle
@@ -18,6 +19,21 @@ from Timer import Timer
 
 __output__ = True
 __timing__ = True
+
+class Metrics(NamedTuple):
+    """
+    Named Immutable Tuple to store the data collected each cycle
+    """
+    cycle: int
+    cells: int
+    dofs: int
+    max_error: float
+    l2_error: float
+    l2_relative_error: float
+    error_p1: float
+    error_p2: float
+    error_p3: float
+
 
 class Poisson:
     """
@@ -126,7 +142,7 @@ class Poisson:
         return (a,f,c)
     
     
-    def calculate_error(self):
+    def estimate_error(self):
         """
         Estimate the error using an ZZ-error estimator described in the documentation.
         """
@@ -176,7 +192,7 @@ class Poisson:
         vtk.Do()
 
     
-    def calculate_max_error(self) -> float:
+    def calculate_max_error(self):
         err = 0.0
         for v in self.mesh.vertices:
             x, y, z = v.point
@@ -190,36 +206,32 @@ class Poisson:
         Takes the current solution and the defined real solution and calculates the exact error.
         The function stores the absolute and relative along with other metrics in the table_list array.
         """
-        values = []
-        values.append(cycle)
-
-        values.append(len([el for el in self.mesh.Elements()]))
-
-        values.append(self.fes.ndof)
 
         l2_error = sqrt(Integrate((self.gfu - self.uexact)**2, self.mesh))
-        values.append(l2_error)
         
         l2_relative_error = sqrt(Integrate((self.gfu - self.uexact)**2,self.mesh)) / sqrt(Integrate(self.uexact**2, self.mesh))
-        values.append(l2_relative_error)
         
         max_error = self.calculate_max_error()
-        #max_error = max(Integrate(self.gfu, self.mesh, VOL, element_wise=True)-Integrate(self.uexact, self.mesh, VOL, element_wise=True))
-        values.append(max_error)       
+        #max_error = max(Integrate(self.gfu, self.mesh, VOL, element_wise=True)-Integrate(self.uexact, self.mesh, VOL, element_wise=True))   
 
         ip1 = self.mesh(0.125, 0.125, 0.125)
         error_p1 = abs(self.gfu(ip1) - self.uexact(ip1))
-        values.append(error_p1)
         
         ip2 = self.mesh(0.25, 0.25, 0.25)
         error_p2 = abs(self.gfu(ip2) - self.uexact(ip2))
-        values.append(error_p2)
         
         ip3 = self.mesh(0.5, 0.5, 0.5)
         error_p3 = abs(self.gfu(ip3) - self.uexact(ip3))
-        values.append(error_p3)
+        
+        num_cells = len([el for el in self.mesh.Elements()])
 
-        self.table_list.append(values)
+        self.table_list.append(Metrics(cycle, 
+                                       num_cells, 
+                                       self.fes.ndof, 
+                                       max_error,
+                                       l2_error,
+                                       l2_relative_error,
+                                       error_p1, error_p2, error_p3))
         
         print("Max error: {}".format(max_error))
         print("L2 error: {}".format(l2_error))
@@ -233,6 +245,12 @@ class Poisson:
         f.write("\\begin{table}[h]\n")
         f.write("\t\\begin{center}\n")
         f.write("\t\t\\begin{tabular}{|c|c|c|c|c|} \hline\n")
+        
+        plot_l2 = open("output/error_l2.txt", 'w')
+        plot_l2.write("$NGSolve$\n")
+        plot_l2.write("$n_\\text{dof}$\n")
+        plot_l2.write("$\\left\\|u - u_h\\right\\| _{L^2}$\n")
+        plot_l2.write("{}\n".format(len(self.table_list)))
 
         plot_max = open("output/error_max.txt", 'w')
         plot_max.write("$NGSolve$\n")
@@ -259,18 +277,21 @@ class Poisson:
         plot_p3.write("{}\n".format(len(self.table_list)))
 
         f.write("\t\t\tcycle & \# cells & \# dofs & $\\left\\|u - u_h\\right\\| _{L^\\infty}$ & $\dfrac{\\left\\|u - u_h\\right\\| _{L^\\infty}}{\\left\\|u - u_h\\right\\| _{L^\\infty}}$\\\ \hline\n")
-        for cycle, cells, dofs, l2error, l2relative_error, maxerror, error_p1, error_p2, error_p3 in self.table_list:
-            f.write("\t\t\t{} & {} & {} & {:.3e} & {:.3e}\\\ \hline\n".format(cycle, cells, dofs, l2error, maxerror))
-            plot_max.write("{} {}\n".format(dofs, maxerror))
-            plot_p1.write("{} {}\n".format(dofs, error_p1))
-            plot_p2.write("{} {}\n".format(dofs, error_p2))
-            plot_p3.write("{} {}\n".format(dofs, error_p3))
+        for m in self.table_list:
+            f.write("\t\t\t{} & {} & {} & {:.3e} & {:.3e}\\\ \hline\n".format(m.cycle, m.cells, m.dofs, m.l2_error, m.max_error))
+            plot_l2.write("{} {}\n".format(m.dofs, m.l2_error))
+            plot_max.write("{} {}\n".format(m.dofs, m.max_error))
+            plot_p1.write("{} {}\n".format(m.dofs, m.error_p1))
+            plot_p2.write("{} {}\n".format(m.dofs, m.error_p2))
+            plot_p3.write("{} {}\n".format(m.dofs, m.error_p3))
             
 
         f.write("\t\t\end{tabular}\n")
         f.write("\t\end{center}\n")
         f.write("\\end{table}")
         f.close()
+        
+        plot_l2.close()
         plot_max.close()
         plot_p1.close()
         plot_p2.close()
@@ -300,7 +321,7 @@ class Poisson:
                 self.exact_error(cycle)
                 self.output_vtk(cycle)
 
-            self.calculate_error()
+            self.estimate_error()
 
             print("Cycle: {}, DOFs: {}".format(cycle, self.fes.ndof))
             cycle += 1
