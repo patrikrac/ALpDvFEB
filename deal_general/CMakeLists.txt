@@ -9,15 +9,16 @@ SET(TARGET "dealii_general")
 # the one step-X.cc file, but as you expand your project you may wish
 # to add other source files as well. If your project becomes much larger,
 # you may want to either replace the following statement by something like
-#    FILE(GLOB_RECURSE TARGET_SRC  "source/*.cpp")
-#    FILE(GLOB_RECURSE TARGET_INC  "include/*.h")
-#    SET(TARGET_SRC ${TARGET_SRC}  ${TARGET_INC})
+FILE(GLOB_RECURSE TARGET_SRC  "source/*.cpp")
+FILE(GLOB_RECURSE TARGET_INC  "source/*.hpp")
+SET(TARGET_SRC ${TARGET_SRC} ${TARGET_INC} )
 # or switch altogether to the large project CMakeLists.txt file discussed
 # in the "CMake in user projects" page accessible from the "User info"
 # page of the documentation.
-SET(TARGET_SRC
-  ${TARGET}.cpp
-  )
+#SET(TARGET_SRC ${TARGET}.cpp)
+
+option ( USE_TIMING "ENABLE TIME MEASUREMENTS" ON )
+option ( USE_OUTPUT "ENABLE DATA OUTPUT" ON )
 
 # Usually, you will not need to modify anything beyond this point...
 
@@ -37,3 +38,11 @@ ENDIF()
 DEAL_II_INITIALIZE_CACHED_VARIABLES()
 PROJECT(${TARGET})
 DEAL_II_INVOKE_AUTOPILOT()
+
+if ( USE_TIMING )
+  target_compile_definitions( ${TARGET} PRIVATE "-DUSE_TIMING" )
+endif()
+
+if ( USE_OUTPUT )
+  target_compile_definitions( ${TARGET} PRIVATE "-DUSE_OUTPUT" )
+endif()
