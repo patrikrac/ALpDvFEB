@@ -14,12 +14,23 @@ from ngsolve import *
 from netgen.csg import *
 from netgen.geom2d import CSG2d, Rectangle
 
-class Poisson:
+from Timer import Timer
 
+__output__ = True
+__timing__ = True
+
+class Poisson:
+    """
+    Class for solving a Poisson equation with adaptive mesh refinement.
+    The problem parameters are defined in the __init__ method.
+    """
+    
     def __init__(self, order, max_dof):
         
         self.order = order
         self.max_dof = max_dof
+        
+        self.timer = Timer()
         
         #User concfiguration (Problem definition)
          #=============================================
@@ -164,6 +175,15 @@ class Poisson:
         # Exporting the results:
         vtk.Do()
 
+    
+    def calculate_max_error(self) -> float:
+        err = 0.0
+        for v in self.mesh.vertices:
+            x, y, z = v.point
+            ip = self.mesh(x, y, z)
+            point_err = abs(self.gfu(ip) - self.uexact(ip))
+            if err < point_err: err = point_err
+        return err
 
     def exact_error(self, cycle):
         """
@@ -177,19 +197,15 @@ class Poisson:
 
         values.append(self.fes.ndof)
 
-        l2_error = sqrt(Integrate((self.gfu - self.uexact)*(self.gfu - self.uexact), self.mesh))
+        l2_error = sqrt(Integrate((self.gfu - self.uexact)**2, self.mesh))
         values.append(l2_error)
         
-        l2_relative_error = sqrt(Integrate((self.gfu - self.uexact)*(self.gfu - self.uexact),self.mesh)) / sqrt(Integrate(self.uexact*self.uexact, self.mesh))
+        l2_relative_error = sqrt(Integrate((self.gfu - self.uexact)**2,self.mesh)) / sqrt(Integrate(self.uexact**2, self.mesh))
         values.append(l2_relative_error)
         
-        #Max error is calculated wrongly
-        #TODO: Fix implementation of error
-        max_error = max(Integrate((self.gfu - self.uexact), self.mesh, VOL, element_wise=True))
+        max_error = self.calculate_max_error()
+        #max_error = max(Integrate(self.gfu, self.mesh, VOL, element_wise=True)-Integrate(self.uexact, self.mesh, VOL, element_wise=True))
         values.append(max_error)       
-
-        max_relative_error = max_error / max(Integrate(self.uexact,  self.mesh, VOL, element_wise=True))
-        values.append(max_relative_error)
 
         ip1 = self.mesh(0.125, 0.125, 0.125)
         error_p1 = abs(self.gfu(ip1) - self.uexact(ip1))
@@ -243,8 +259,8 @@ class Poisson:
         plot_p3.write("{}\n".format(len(self.table_list)))
 
         f.write("\t\t\tcycle & \# cells & \# dofs & $\\left\\|u - u_h\\right\\| _{L^\\infty}$ & $\dfrac{\\left\\|u - u_h\\right\\| _{L^\\infty}}{\\left\\|u - u_h\\right\\| _{L^\\infty}}$\\\ \hline\n")
-        for cycle, cells, dofs, l2error, l2relative_error, maxerror, mexrelative_error, error_p1, error_p2, error_p3 in self.table_list:
-            f.write("\t\t\t{} & {} & {} & {:.3e} & {:.3e}\\\ \hline\n".format(cycle, cells, dofs, maxerror, mexrelative_error))
+        for cycle, cells, dofs, l2error, l2relative_error, maxerror, error_p1, error_p2, error_p3 in self.table_list:
+            f.write("\t\t\t{} & {} & {} & {:.3e} & {:.3e}\\\ \hline\n".format(cycle, cells, dofs, l2error, maxerror))
             plot_max.write("{} {}\n".format(dofs, maxerror))
             plot_p1.write("{} {}\n".format(dofs, error_p1))
             plot_p2.write("{} {}\n".format(dofs, error_p2))
@@ -271,19 +287,27 @@ class Poisson:
             self.mesh.Refine()
 
             self.gfu.Set(self.g, definedon=self.mesh.Boundaries("bnd"))
+            
+            if __timing__:
+                self.timer.startTimer()
 
             self.solve()
+            
+            if __timing__:
+                self.timer.printTimer()
 
-            self.exact_error(cycle)
-            self.output_vtk(cycle)
+            if __output__:
+                self.exact_error(cycle)
+                self.output_vtk(cycle)
 
             self.calculate_error()
 
             print("Cycle: {}, DOFs: {}".format(cycle, self.fes.ndof))
             cycle += 1
-            
-        self.output_vtk(cycle)
-        self.output_Table()
+        
+        if __output__:
+            self.output_vtk(cycle)
+            self.output_Table()
         
 
 
