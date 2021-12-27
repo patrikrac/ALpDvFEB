@@ -1,41 +1,73 @@
-#include "data.hpp"
+#include <deal.II/base/quadrature_lib.h>
+#include <deal.II/base/function.h>
+#include <deal.II/base/logstream.h>
+#include <deal.II/base/utilities.h>
+#include <deal.II/lac/dynamic_sparsity_pattern.h>
+#include <deal.II/lac/vector.h>
+#include <deal.II/lac/full_matrix.h>
+#include <deal.II/lac/sparse_matrix.h>
+#include <deal.II/lac/solver_cg.h>
+#include <deal.II/lac/precondition.h>
+#include <deal.II/lac/affine_constraints.h>
+#include <deal.II/grid/tria.h>
+#include <deal.II/grid/grid_generator.h>
+#include <deal.II/grid/grid_refinement.h>
+#include <deal.II/dofs/dof_tools.h>
+#include <deal.II/fe/fe_q.h>
+#include <deal.II/numerics/vector_tools.h>
+#include <deal.II/numerics/matrix_tools.h>
+#include <deal.II/numerics/data_out.h>
+#include <deal.II/numerics/error_estimator.h>
+
+#include <deal.II/base/convergence_table.h>
+
+#include <deal.II/fe/fe_values.h>
+#include <deal.II/base/quadrature_lib.h>
+
+#include <deal.II/hp/fe_collection.h>
+#include <deal.II/hp/fe_values.h>
+#include <deal.II/hp/refinement.h>
+#include <deal.II/fe/fe_series.h>
+#include <deal.II/numerics/smoothness_estimator.h>
+
+#include <deal.II/base/conditional_ostream.h>
+#include <deal.II/base/mpi.h>
+
+#include <deal.II/lac/petsc_vector.h>
+#include <deal.II/lac/petsc_sparse_matrix.h>
+
+#include <deal.II/lac/petsc_solver.h>
+#include <deal.II/lac/petsc_precondition.h>
+
+#include <deal.II/grid/grid_tools.h>
+#include <deal.II/dofs/dof_renumbering.h>
+
+#include <fstream>
+#include <iostream>
+#include <vector>
+#include <math.h>
+
 #include "evaluation.hpp"
+#include "problem.hpp"
+
+#ifdef USE_TIMING
 #include "Timer.hpp"
+#endif
 #pragma once
 
-namespace problem_hp
+namespace AspDEQuFEL
 {
-
-    /**********
- * Wrapper around the timer functions that are given.
- * */
-    timing::Timer timer;
-    // Starts or resets the current clock.
-    void startTimer()
-    {
-        timer.reset();
-    }
-    // prints the current value of the clock
-    double printTimer()
-    {
-        double time = timer.elapsed();
-        std::cout << "Calculation took " << time << " seconds." << std::endl;
-        return time;
-    }
-    /**
- * End of time wrapper functions
- *********/
 
     using namespace dealii;
     //------------------------------
     //Class which stores all vital parameters and has all functions to solve the problem using hp-adaptivity
     //------------------------------
     template <int dim>
-    class ProblemHP
+    class PoissonHP
     {
     public:
-        ProblemHP();
-        ~ProblemHP();
+        PoissonHP(int);
+        ~PoissonHP();
 
         void run();
 
@@ -48,6 +80,15 @@ namespace problem_hp
         void refine_grid();
         void calculate_exact_error(const unsigned int cycle);
         void output_results();
+
+#ifdef USE_TIMING
+        void startTimer();
+        double printTimer();
+
+        timing::Timer timer;
+#endif
+
+        int max_dofs;
 
         Triangulation<dim> triangulation;
 
@@ -75,7 +116,7 @@ namespace problem_hp
     //Set an adequate maximum degree.
     //------------------------------
     template <int dim>
-    ProblemHP<dim>::ProblemHP() : dof_handler(triangulation), max_degree(dim <= 2 ? 7 : 5)
+    PoissonHP<dim>::PoissonHP(int max_dof) : max_dofs(max_dof), dof_handler(triangulation), max_degree(dim <= 2 ? 7 : 5)
     {
         for (unsigned int degree = 2; degree <= max_degree; degree++)
         {
@@ -89,17 +130,39 @@ namespace problem_hp
     //Destructor for the ProblemHP class
     //------------------------------
     template <int dim>
-    ProblemHP<dim>::~ProblemHP()
+    PoissonHP<dim>::~PoissonHP()
     {
         dof_handler.clear();
     }
+
+#ifdef USE_TIMING
+    //------------------------------
+    //Start the timer
+    //------------------------------
+    template <int dim>
+    void PoissonHP<dim>::startTimer()
+    {
+        timer.reset();
+    }
+
+    //------------------------------
+    // Prints the current value of the clock
+    //------------------------------
+    template <int dim>
+    double PoissonHP<dim>::printTimer()
+    {
+        double time = timer.elapsed();
+        std::cout << "Calculation took " << time << " seconds." << std::endl;
+        return time;
+    }
+#endif
 
     //------------------------------
     //Construct the Grid the ProblemHP is beeing solved on.
     //Define the default coarsaty / refinement of the grid
     //------------------------------
     template <int dim>
-    void ProblemHP<dim>::make_grid()
+    void PoissonHP<dim>::make_grid()
     {
         //Appropriate grid generation has to be implemented in here!
         //The default grid generated will be a unit square/cube depending on the dimensionality of the problem.
@@ -115,7 +178,7 @@ namespace problem_hp
     //Althogh system calls are equal to the ones of the non hp-version of the program, it has to be noted that the dof_handler is in hp-mode and therefore the calls differ internally.
     //------------------------------
     template <int dim>
-    void ProblemHP<dim>::setup_system()
+    void PoissonHP<dim>::setup_system()
     {
         dof_handler.distribute_dofs(fe_collection);
 
@@ -139,7 +202,7 @@ namespace problem_hp
     //Assemble the system by creating a quadrature rule for integeration, calculate local matrices using the appropriate weak formulations and assamble the global matrices.
     //------------------------------
     template <int dim>
-    void ProblemHP<dim>::assemble_system()
+    void PoissonHP<dim>::assemble_system()
     {
         hp::FEValues<dim> hp_fe_values(fe_collection,
                                        quadrature_collection,
@@ -198,7 +261,7 @@ namespace problem_hp
     //Return the number of degrees of freedom of the current ProblemHP state.
     //------------------------------
     template <int dim>
-    int ProblemHP<dim>::get_n_dof()
+    int PoissonHP<dim>::get_n_dof()
     {
         return dof_handler.n_dofs();
     }
@@ -207,7 +270,7 @@ namespace problem_hp
     //Set solving conditinos and define the solver. Then solve the given system.
     //------------------------------
     template <int dim>
-    void ProblemHP<dim>::solve()
+    void PoissonHP<dim>::solve()
     {
         SolverControl solver_control(system_rhs.size(), 1e-12 * system_rhs.l2_norm());
         SolverCG<Vector<double>> solver(solver_control);
@@ -224,7 +287,7 @@ namespace problem_hp
     //Refine the Grid using a built in error estimator.
     //------------------------------
     template <int dim>
-    void ProblemHP<dim>::refine_grid()
+    void PoissonHP<dim>::refine_grid()
     {
         Vector<float> estimated_error_per_cell(triangulation.n_active_cells());
 
@@ -257,7 +320,7 @@ namespace problem_hp
     //Output the result using a vtk file format
     //------------------------------
     template <int dim>
-    void ProblemHP<dim>::output_results()
+    void PoissonHP<dim>::output_results()
     {
         DataOut<dim> data_out;
 
@@ -277,14 +340,11 @@ namespace problem_hp
         data_out.write_vtk(output);
 
         convergence_table.set_precision("Linfty", 3);
-        convergence_table.set_precision("relativeLinfty", 3);
         convergence_table.set_scientific("Linfty", true);
-        convergence_table.set_scientific("relativeLinfty", true);
 
         convergence_table.set_tex_caption("cells", "\\# cells");
         convergence_table.set_tex_caption("dofs", "\\# dofs");
         convergence_table.set_tex_caption("Linfty", "$L^\\infty$");
-        convergence_table.set_tex_caption("relativeLinfty", "relative");
 
         std::ofstream error_table_file("error.tex");
         convergence_table.write_tex(error_table_file);
@@ -297,7 +357,7 @@ namespace problem_hp
         output_custom << convergence_vector.size() << std::endl;
         for (size_t i = 0; i < convergence_vector.size(); i++)
         {
-            output_custom << convergence_vector[i].n_dofs << " " << convergence_vector[i].error << std::endl;
+            output_custom << convergence_vector[i].n_dofs << " " << convergence_vector[i].max_error << std::endl;
         }
     }
 
@@ -305,7 +365,7 @@ namespace problem_hp
     //Calculate the exact error using the Solution class at the given cycle
     //-------------------------------------------------------------
     template <int dim>
-    void ProblemHP<dim>::calculate_exact_error(const unsigned int cycle)
+    void PoissonHP<dim>::calculate_exact_error(const unsigned int cycle)
     {
         Vector<float> difference_per_cell(triangulation.n_active_cells());
 
@@ -317,20 +377,6 @@ namespace problem_hp
                                           quadrature_collection,
                                           VectorTools::Linfty_norm);
         const double Linfty_error = VectorTools::compute_global_error(triangulation, difference_per_cell, VectorTools::Linfty_norm);
-
-        Vector<double> zero_vector(dof_handler.n_dofs());
-        Vector<float> norm_per_cell(triangulation.n_active_cells());
-
-        VectorTools::integrate_difference(dof_handler,
-                                          zero_vector,
-                                          Solution<dim>(),
-                                          difference_per_cell,
-                                          quadrature_collection,
-                                          VectorTools::Linfty_norm);
-
-        const double Linfty_norm = VectorTools::compute_global_error(triangulation, difference_per_cell, VectorTools::Linfty_norm);
-
-        const double relative_Linfty_error = Linfty_error / Linfty_norm;
 
         const unsigned int n_active_cells = triangulation.n_active_cells();
         const unsigned int n_dofs = dof_handler.n_dofs();
@@ -344,11 +390,9 @@ namespace problem_hp
         convergence_table.add_value("cells", n_active_cells);
         convergence_table.add_value("dofs", n_dofs);
         convergence_table.add_value("Linfty", Linfty_error);
-        convergence_table.add_value("relativeLinfty", relative_Linfty_error);
 
         metrics values = {};
-        values.error = Linfty_error;
-        values.relative_error = relative_Linfty_error;
+        values.max_error = Linfty_error;
         values.n_dofs = n_dofs;
         values.cycle = cycle;
 
@@ -359,7 +403,7 @@ namespace problem_hp
     //Execute the solving process with cylce refinement steps.
     //------------------------------
     template <int dim>
-    void ProblemHP<dim>::run()
+    void PoissonHP<dim>::run()
     {
 
         int cycle = 0;
@@ -380,7 +424,7 @@ namespace problem_hp
             calculate_exact_error(cycle);
 
             //Netgen similar condition to reach desired number of degrees of freedom
-            if (get_n_dof() > 1000000)
+            if (get_n_dof() > max_dofs)
             {
                 break;
             }
@@ -388,6 +432,8 @@ namespace problem_hp
             cycle++;
         }
 
+#ifdef USE_OUTPUT
         output_results();
+#endif
     }
 }

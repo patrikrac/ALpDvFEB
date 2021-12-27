@@ -3,43 +3,71 @@ Created by Patrik Rac
 Programm solving a partial differential equation of arbitrary dimensionality using the functionality of the deal.ii FE-library.
 The classes defined here can be modified in order to solve each specific Problem.
 ---------------------------------------------------------------- */
-#include "data.hpp"
+#include <deal.II/base/quadrature_lib.h>
+#include <deal.II/base/function.h>
+#include <deal.II/base/logstream.h>
+#include <deal.II/base/utilities.h>
+#include <deal.II/lac/dynamic_sparsity_pattern.h>
+#include <deal.II/lac/vector.h>
+#include <deal.II/lac/full_matrix.h>
+#include <deal.II/lac/sparse_matrix.h>
+#include <deal.II/lac/solver_cg.h>
+#include <deal.II/lac/precondition.h>
+#include <deal.II/lac/affine_constraints.h>
+#include <deal.II/grid/tria.h>
+#include <deal.II/grid/grid_generator.h>
+#include <deal.II/grid/grid_refinement.h>
+#include <deal.II/dofs/dof_tools.h>
+#include <deal.II/fe/fe_q.h>
+#include <deal.II/numerics/vector_tools.h>
+#include <deal.II/numerics/matrix_tools.h>
+#include <deal.II/numerics/data_out.h>
+#include <deal.II/numerics/error_estimator.h>
+
+#include <deal.II/base/convergence_table.h>
+
+#include <deal.II/fe/fe_values.h>
+#include <deal.II/base/quadrature_lib.h>
+
+#include <deal.II/fe/fe_series.h>
+#include <deal.II/numerics/smoothness_estimator.h>
+
+#include <deal.II/base/conditional_ostream.h>
+#include <deal.II/base/mpi.h>
+
+#include <deal.II/lac/petsc_vector.h>
+#include <deal.II/lac/petsc_sparse_matrix.h>
+
+#include <deal.II/lac/petsc_solver.h>
+#include <deal.II/lac/petsc_precondition.h>
+
+#include <deal.II/grid/grid_tools.h>
+#include <deal.II/dofs/dof_renumbering.h>
+
+#include <fstream>
+#include <iostream>
+#include <vector>
+#include <math.h>
+
 #include "evaluation.hpp"
+#include "problem.hpp"
+
+#ifdef USE_TIMING
 #include "Timer.hpp"
+#endif
 #pragma once
 
-namespace problem_h
+namespace AspDEQuFEL
 {
-
-    /**********
- * Wrapper around the timer functions that are given.
- * */
-    timing::Timer timer;
-    // Starts or resets the current clock.
-    void startTimer()
-    {
-        timer.reset();
-    }
-    // prints the current value of the clock
-    double printTimer()
-    {
-        double time = timer.elapsed();
-        std::cout << "Calculation took " << time << " seconds." << std::endl;
-        return time;
-    }
-    /**
- * End of time wrapper functions
- *********/
-
     using namespace dealii;
     //------------------------------
     //Class which stores and solves the problem using only h-adaptivity.
     //------------------------------
     template <int dim>
-    class Problem
+    class Poisson
     {
     public:
-        Problem(int, int);
+        Poisson(int, int);
         void run();
 
     private:
@@ -52,6 +80,13 @@ namespace problem_h
         void calculate_exact_error(const unsigned int cycle);
         void output_results(const unsigned int cycle) const;
         void output_error();
+
+#ifdef USE_TIMING
+        void startTimer();
+        double printTimer();
+
+        timing::Timer timer;
+#endif
 
         int max_dofs;
 
@@ -79,12 +114,12 @@ namespace problem_h
         std::vector<metrics> convergence_vector;
     };
 
-        //------------------------------
+    //------------------------------
     //Initialize the problem with first order finite elements
     //The dof_handler manages enumeration and indexing of all degrees of freedom (relating to the given triangulation)
     //------------------------------
     template <int dim>
-    Problem<dim>::Problem(int order, int max_dof) : max_dofs(max_dof), mpi_communicator(MPI_COMM_WORLD),
+    Poisson<dim>::Poisson(int order, int max_dof) : max_dofs(max_dof), mpi_communicator(MPI_COMM_WORLD),
                                                     n_mpi_processes(Utilities::MPI::n_mpi_processes(mpi_communicator)),
                                                     this_mpi_process(Utilities::MPI::this_mpi_process(mpi_communicator)),
                                                     pcout(std::cout, (this_mpi_process == 0)),
@@ -96,12 +131,34 @@ namespace problem_h
     {
     }
 
+#ifdef USE_TIMING
+    //--------------------------------
+    // Starts or resets the current clock.
+    //--------------------------------
+    template <int dim>
+    void Poisson<dim>::startTimer()
+    {
+        timer.reset();
+    }
+
+    //--------------------------------
+    // Prints the current value of the clock
+    //--------------------------------
+    template <int dim>
+    double Poisson<dim>::printTimer()
+    {
+        double time = timer.elapsed();
+        std::cout << "Calculation took " << time << " seconds." << std::endl;
+        return time;
+    }
+#endif
+
     //------------------------------
     //Construct the Grid the problem is beeing solved on.
     //Define the default coarsaty / refinement of the grid
     //------------------------------
     template <int dim>
-    void Problem<dim>::make_grid()
+    void Poisson<dim>::make_grid()
     {
         //Appropriate grid generation has to be implemented in here!
         //The default grid generated will be a unit square/cube depending on the dimensionality of the problem.
@@ -117,7 +174,7 @@ namespace problem_h
     //Setup the system by initializing the solution and problem vectors with the right dimensionality and apply bounding constraints.
     //------------------------------
     template <int dim>
-    void Problem<dim>::setup_system()
+    void Poisson<dim>::setup_system()
     {
         GridTools::partition_triangulation(n_mpi_processes, triangulation);
 
@@ -147,7 +204,7 @@ namespace problem_h
     //Assemble the system by creating a quadrature rule for integeration, calculate local matrices using the appropriate weak formulations and assamble the global matrices.
     //------------------------------
     template <int dim>
-    void Problem<dim>::assemble_system()
+    void Poisson<dim>::assemble_system()
     {
         QGauss<dim> quadrature_formula(fe.degree + 1);
         FEValues<dim> fe_values(fe,
@@ -210,7 +267,7 @@ namespace problem_h
     //Return the number of degrees of freedom of the current problem state.
     //------------------------------
     template <int dim>
-    int Problem<dim>::get_n_dof()
+    int Poisson<dim>::get_n_dof()
     {
         return dof_handler.n_dofs();
     }
@@ -219,7 +276,7 @@ namespace problem_h
     //Set solving conditinos and define the solver. Then solve the given system.
     //------------------------------
     template <int dim>
-    void Problem<dim>::solve()
+    void Poisson<dim>::solve()
     {
         SolverControl solver_control(1000, 1e-12);
         PETScWrappers::SolverCG cg(solver_control, mpi_communicator);
@@ -238,7 +295,7 @@ namespace problem_h
     //Refine the Grid using a built in error estimator
     //------------------------------
     template <int dim>
-    void Problem<dim>::refine_grid()
+    void Poisson<dim>::refine_grid()
     {
         const Vector<double> localized_solution(solution);
 
@@ -270,7 +327,7 @@ namespace problem_h
     //Output the result using a vtk file format
     //------------------------------
     template <int dim>
-    void Problem<dim>::output_results(const unsigned int cycle) const
+    void Poisson<dim>::output_results(const unsigned int cycle) const
     {
         const Vector<double> localized_solution(solution);
         if (this_mpi_process == 0)
@@ -289,17 +346,15 @@ namespace problem_h
     }
 
     template <int dim>
-    void Problem<dim>::output_error()
+    void Poisson<dim>::output_error()
     {
         if (this_mpi_process == 0)
         {
             convergence_table.set_precision("Linfty", 3);
-            convergence_table.set_precision("relativeLinfty", 3);
             convergence_table.set_precision("error_p1", 3);
             convergence_table.set_precision("error_p2", 3);
             convergence_table.set_precision("error_p3", 3);
             convergence_table.set_scientific("Linfty", true);
-            convergence_table.set_scientific("relativeLinfty", true);
             convergence_table.set_scientific("error_p1", true);
             convergence_table.set_scientific("error_p2", true);
             convergence_table.set_scientific("error_p3", true);
@@ -307,7 +362,6 @@ namespace problem_h
             convergence_table.set_tex_caption("cells", "\\# cells");
             convergence_table.set_tex_caption("dofs", "\\# dofs");
             convergence_table.set_tex_caption("Linfty", "$\\left\\|u_h - I_hu\\right\\| _{L^\\infty}$");
-            convergence_table.set_tex_caption("relativeLinfty", "$\\frac{\\left\\|u_h - I_hu\\right\\| _{L^\\infty}}{\\left\\|I_hu\\right\\| _{L^\\infty}}$");
             convergence_table.set_tex_caption("error_p1", "$\\left\\|u_h(x_1) - I_hu(x_1)\\right\\| $");
             convergence_table.set_tex_caption("error_p2", "$\\left\\|u_h(x_2) - I_hu(x_2)\\right\\| $");
             convergence_table.set_tex_caption("error_p3", "$\\left\\|u_h(x_3) - I_hu(x_3)\\right\\| $");
@@ -323,7 +377,7 @@ namespace problem_h
             output_custom1 << convergence_vector.size() << std::endl;
             for (size_t i = 0; i < convergence_vector.size(); i++)
             {
-                output_custom1 << convergence_vector[i].n_dofs << " " << convergence_vector[i].error << std::endl;
+                output_custom1 << convergence_vector[i].n_dofs << " " << convergence_vector[i].max_error << std::endl;
             }
             output_custom1.close();
 
@@ -369,7 +423,7 @@ namespace problem_h
     //Calculate the exact error usign the solution class.
     //----------------------------------------------------------------
     template <int dim>
-    void Problem<dim>::calculate_exact_error(const unsigned int cycle)
+    void Poisson<dim>::calculate_exact_error(const unsigned int cycle)
     {
         Vector<float> difference_per_cell(triangulation.n_active_cells());
 
@@ -382,20 +436,6 @@ namespace problem_h
                                           q_iterated,
                                           VectorTools::Linfty_norm);
         const double Linfty_error = VectorTools::compute_global_error(triangulation, difference_per_cell, VectorTools::Linfty_norm);
-
-        Vector<double> zero_vector(dof_handler.n_dofs());
-        Vector<float> norm_per_cell(triangulation.n_active_cells());
-
-        VectorTools::integrate_difference(dof_handler,
-                                          zero_vector,
-                                          Solution<dim>(),
-                                          difference_per_cell,
-                                          q_iterated,
-                                          VectorTools::Linfty_norm);
-
-        const double Linfty_norm = VectorTools::compute_global_error(triangulation, difference_per_cell, VectorTools::Linfty_norm);
-
-        const double relative_Linfty_error = Linfty_error / Linfty_norm;
 
         const unsigned int n_active_cells = triangulation.n_active_cells();
         const unsigned int n_dofs = dof_handler.n_dofs();
@@ -414,14 +454,12 @@ namespace problem_h
         convergence_table.add_value("cells", n_active_cells);
         convergence_table.add_value("dofs", n_dofs);
         convergence_table.add_value("Linfty", Linfty_error);
-        convergence_table.add_value("relativeLinfty", relative_Linfty_error);
         convergence_table.add_value("error_p1", error_p1);
         convergence_table.add_value("error_p2", error_p2);
         convergence_table.add_value("error_p3", error_p3);
 
         metrics values = {};
-        values.error = Linfty_error;
-        values.relative_error = relative_Linfty_error;
+        values.max_error = Linfty_error;
         values.error_p1 = error_p1;
         values.error_p2 = error_p2;
         values.error_p3 = error_p3;
@@ -435,29 +473,39 @@ namespace problem_h
     //Run the problem.
     //------------------------------
     template <int dim>
-    void Problem<dim>::run()
+    void Poisson<dim>::run()
     {
 
         int cycle = 0;
         make_grid();
         while (true)
         {
+#ifdef USE_TIMING
             if (this_mpi_process == 0)
             {
                 startTimer();
             }
+#endif
+
             setup_system();
             assemble_system();
             solve();
+
+#ifdef USE_TIMING
             if (this_mpi_process == 0)
             {
                 printTimer();
             }
+#endif
 
             //calculate_exact_error(cycle);
             pcout << "Cycle " << cycle << std::endl;
             pcout << "DOFs: " << get_n_dof() << std::endl;
+
+#ifdef USE_OUTPUT
             output_results(cycle);
+#endif
+
             //Condition to reach desired number of degrees of freedom
             if (get_n_dof() > max_dofs)
             {

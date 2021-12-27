@@ -1,51 +1,6 @@
-#include <deal.II/base/quadrature_lib.h>
+//Created by Patrik Rác
+//Function Headers definitions for the poisson problem definition
 #include <deal.II/base/function.h>
-#include <deal.II/base/logstream.h>
-#include <deal.II/base/utilities.h>
-#include <deal.II/lac/dynamic_sparsity_pattern.h>
-#include <deal.II/lac/vector.h>
-#include <deal.II/lac/full_matrix.h>
-#include <deal.II/lac/sparse_matrix.h>
-#include <deal.II/lac/solver_cg.h>
-#include <deal.II/lac/precondition.h>
-#include <deal.II/lac/affine_constraints.h>
-#include <deal.II/grid/tria.h>
-#include <deal.II/grid/grid_generator.h>
-#include <deal.II/grid/grid_refinement.h>
-#include <deal.II/dofs/dof_tools.h>
-#include <deal.II/fe/fe_q.h>
-#include <deal.II/numerics/vector_tools.h>
-#include <deal.II/numerics/matrix_tools.h>
-#include <deal.II/numerics/data_out.h>
-#include <deal.II/numerics/error_estimator.h>
-
-#include <deal.II/base/convergence_table.h>
-
-#include <deal.II/fe/fe_values.h>
-#include <deal.II/base/quadrature_lib.h>
-
-#include <deal.II/hp/fe_collection.h>
-#include <deal.II/hp/fe_values.h>
-#include <deal.II/hp/refinement.h>
-#include <deal.II/fe/fe_series.h>
-#include <deal.II/numerics/smoothness_estimator.h>
-
-#include <deal.II/base/conditional_ostream.h>
-#include <deal.II/base/mpi.h>
-
-#include <deal.II/lac/petsc_vector.h>
-#include <deal.II/lac/petsc_sparse_matrix.h>
-
-#include <deal.II/lac/petsc_solver.h>
-#include <deal.II/lac/petsc_precondition.h>
-
-#include <deal.II/grid/grid_tools.h>
-#include <deal.II/dofs/dof_renumbering.h>
-
-#include <fstream>
-#include <iostream>
-#include <vector>
-#include <math.h>
 #pragma once
 
 using namespace dealii;
@@ -58,6 +13,29 @@ class BoundaryValues : public Function<dim>
 public:
     virtual double value(const Point<dim> &p, const unsigned int component = 0) const override;
 };
+
+
+//------------------------------
+//Define the the right hand side function of the Problem.
+//------------------------------
+template <int dim>
+class RHS_function : public Function<dim>
+{
+public:
+    virtual double value(const Point<dim> &p, const unsigned int component = 0) const override;
+};
+
+
+//------------------------------
+//Define the exact soliution of the Problem., in order to calculate the exact error.
+//------------------------------
+template <int dim>
+class Solution : public Function<dim>
+{
+public:
+    virtual double value(const Point<dim> &p, const unsigned int component = 0) const override;
+};
+
 
 template <int dim>
 double BoundaryValues<dim>::value(const Point<dim> &p, const unsigned int /*component*/) const
@@ -93,15 +71,6 @@ double BoundaryValues<dim>::value(const Point<dim> &p, const unsigned int /*comp
     
 }
 
-//------------------------------
-//Define the the right hand side function of the Problem.
-//------------------------------
-template <int dim>
-class RHS_function : public Function<dim>
-{
-public:
-    virtual double value(const Point<dim> &p, const unsigned int component = 0) const override;
-};
 
 template <int dim>
 double RHS_function<dim>::value(const Point<dim> &p, const unsigned int /*component*/) const
@@ -133,15 +102,6 @@ double RHS_function<dim>::value(const Point<dim> &p, const unsigned int /*compon
     */
 }
 
-//------------------------------
-//Define the exact soliution of the Problem., in order to calculate the exact error.
-//------------------------------
-template <int dim>
-class Solution : public Function<dim>
-{
-public:
-    virtual double value(const Point<dim> &p, const unsigned int component = 0) const override;
-};
 
 template <int dim>
 double Solution<dim>::value(const Point<dim> &p, const unsigned int /*component*/) const
@@ -174,4 +134,3 @@ double Solution<dim>::value(const Point<dim> &p, const unsigned int /*component*
     return exp(-10 * (p(0) + p(1))) * (p(2) * p(2));
     */
 }
-
