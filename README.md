@@ -13,7 +13,8 @@ The libraries used include:
 
 The programms build the bases to solve PDEs using an adaptive mesh refinement loop (and in some cases optional hp-adaptive elements).
 
-There is also a parallel branch of the project, where one can find MPI-parallel implementations of each version.
+There is also a parallel branch of the project, where one can find MPI-parallel implementations of each version.  
+Additionally, there is a multigrid branch of the project which tries to leverage the capabilities of multigrid methods for performance benefits.
 
 All programms output their cycle-wise soulution as vtk-files which can be visualised by any compatiable tool (I personally recommend [Visit](https://visit-dav.github.io/visit-website/index.html)).
 
