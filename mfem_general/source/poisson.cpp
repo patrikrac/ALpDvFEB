@@ -1,6 +1,7 @@
 //Created by Patrik Rác
 //Source for the Poisson class
 #include "poisson.hpp"
+#include "multigrid.hpp"
 
 #ifdef USE_TIMING
 #include "Timer.hpp"
@@ -35,10 +36,10 @@ namespace AspDEQuFEL
     //----------------------------------------------------------------
     //Create the mesh the problem will be solved on
     //----------------------------------------------------------------
-    void Poisson::make_mesh()
+    Mesh *Poisson::make_mesh()
     {
         const char *mesh_file = "../data/unit_cube.mesh";
-        mesh = Mesh::LoadFromFile(mesh_file);
+        Mesh mesh = Mesh::LoadFromFile(mesh_file);
         for (int i = 0; i < 3; i++)
         {
             mesh.UniformRefinement();
@@ -50,67 +51,70 @@ namespace AspDEQuFEL
         mesh.Finalize(true);
 
         cout << "Mesh generated." << endl;
-    }
 
-    //----------------------------------------------------------------
-    //Update all variables to adabt to the recently adapted mesh
-    //----------------------------------------------------------------
-    void Poisson::update(BilinearForm &a, LinearForm &f, FiniteElementSpace &fespace, GridFunction &x, GridFunction &error_zero)
-    {
-        fespace.Update();
-
-        x.Update();
-
-        error_zero.Update();
-        error_zero = 0.0;
-
-        fespace.UpdatesFinished();
-
-        // Inform the linear and bilinear forms that the space has changed.
-        a.Update();
-        f.Update();
+        return new Mesh(mesh);
     }
 
     //----------------------------------------------------------------
     //Solve the Problem on the current mesh
     //----------------------------------------------------------------
-    void Poisson::solve(BilinearForm &a, LinearForm &f, FiniteElementSpace &fespace, GridFunction &x, Array<int> &ess_bdr, FunctionCoefficient &bdr)
+    void Poisson::solve(LinearForm &f, FiniteElementSpaceHierarchy &fespaces, GridFunction &x, Array<int> &ess_bdr, FunctionCoefficient &bdr)
     {
-        a.Assemble();
         f.Assemble();
 
-        // Project the exact solution to the essential boundary DOFs.
-        x.ProjectBdrCoefficient(bdr, ess_bdr);
-
         //Create and solve the linear system.
-        Array<int> ess_tdof_list;
-        fespace.GetEssentialTrueDofs(ess_bdr, ess_tdof_list);
+        PoissonMultigrid *M = new PoissonMultigrid(fespaces, ess_bdr);
+        M->SetCycleType(Multigrid::CycleType::VCYCLE, 1, 1);
 
-        SparseMatrix A;
+        OperatorPtr A;
         Vector B, X;
 
-        a.FormLinearSystem(ess_tdof_list, x, f, A, X, B);
+        M->FormFineLinearSystem(x, f, A, X, B);
 
-        GSSmoother M(A);
-        PCG(A, M, B, X, 0, 500, 1e-12, 0.0);
+        PCG(*A, *M, B, X, 1, 2000, 1e-12, 0.0);
 
-        a.RecoverFEMSolution(X, f, x);
+        M->RecoverFEMSolution(X, f, x);
     }
 
     //----------------------------------------------------------------
     //Execute one refinement step and call the update funciton to adapt the other variables
     //----------------------------------------------------------------
-    bool Poisson::refine(BilinearForm &a, LinearForm &f, FiniteElementSpace &fespace, GridFunction &x, GridFunction &error_zero, ThresholdRefiner &refiner)
+    bool Poisson::refine(LinearForm &f, FiniteElementSpaceHierarchy &fespaces, GridFunction &x, GridFunction &error_zero)
     {
-        refiner.Apply(mesh);
+        ConstantCoefficient one(1.0);
+        BilinearFormIntegrator *integ = new DiffusionIntegrator(one);
 
+        KellyErrorEstimator *estimator{nullptr};
+        L2_FECollection flux_fec(order, fespaces.GetFinestFESpace().GetMesh()->Dimension());
+
+        auto flux_fes = new FiniteElementSpace(fespaces.GetFinestFESpace().GetMesh(), &flux_fec, fespaces.GetFinestFESpace().GetMesh()->SpaceDimension());
+        estimator = new KellyErrorEstimator(*integ, x, flux_fes);
+
+        ThresholdRefiner refiner(*estimator);
+        refiner.SetTotalErrorFraction(0.3);
+        refiner.SetLocalErrorGoal(max_elem_error);
+        refiner.SetNCLimit(0);
+
+        refiner.Reset();
+
+        Mesh *mesh = new Mesh(*fespaces.GetFinestFESpace().GetMesh());
+        refiner.Apply(*mesh);
         if (refiner.Stop())
         {
             return false;
         }
 
-        //Update the space and interpolate the solution.
-        update(a, f, fespace, x, error_zero);
+        FiniteElementSpace &coarseFEspace = fespaces.GetFinestFESpace();
+        FiniteElementSpace *fineFEspace = new FiniteElementSpace(mesh, coarseFEspace.FEColl());
+
+        Operator *P = new TransferOperator(coarseFEspace, *fineFEspace);
+        fespaces.AddLevel(mesh, fineFEspace, P, true, true, true);
+
+        x.SetSpace(&fespaces.GetFinestFESpace());
+        error_zero.SetSpace(&fespaces.GetFinestFESpace());
+
+        x = 0.0;
+        error_zero = 0.0;
 
         return true;
     }
@@ -122,79 +126,63 @@ namespace AspDEQuFEL
     void Poisson::run()
     {
         //Mesh Generation
-        make_mesh();
+        Mesh *mesh = make_mesh();
 
         //Declaration
-        int dim = mesh.Dimension();
-        int sdim = mesh.SpaceDimension();
+        int dim = mesh->Dimension();
+        int sdim = mesh->SpaceDimension();
 
         //Setup the necessary spaces and solutions for the problem
-        H1_FECollection fec(order, dim);
-        FiniteElementSpace fespace(&mesh, &fec);
+        H1_FECollection *fec = new H1_FECollection(order, dim);
+        FiniteElementSpace *fespace = new FiniteElementSpace(mesh, fec);
+        FiniteElementSpaceHierarchy fespaces(mesh, fespace, true, true);
 
-        BilinearForm a(&fespace);
-        LinearForm f(&fespace);
+        LinearForm f(&fespaces.GetFinestFESpace());
 
-        GridFunction x(&fespace);
+        GridFunction x(&fespaces.GetFinestFESpace());
+        x = 0.0;
 
         //Grid function for calculation of the relative norm
-        GridFunction error_zero(&fespace);
+        GridFunction error_zero(&fespaces.GetFinestFESpace());
         error_zero = 0.0;
 
         FunctionCoefficient u(bdr_func);
 
-        Array<int> ess_bdr(mesh.bdr_attributes.Max());
+        Array<int> ess_bdr(fespaces.GetFinestFESpace().GetMesh()->bdr_attributes.Max());
         ess_bdr = 1;
 
         //Setup
-        ConstantCoefficient one(1.0);
         FunctionCoefficient rhs(rhs_func);
         FunctionCoefficient bdr(bdr_func);
 
         //Specify the Problem
-        BilinearFormIntegrator *integ = new DiffusionIntegrator(one);
-        a.AddDomainIntegrator(integ);
         f.AddDomainIntegrator(new DomainLFIntegrator(rhs));
-
-        KellyErrorEstimator *estimator{nullptr};
-        L2_FECollection flux_fec(order, dim);
-
-        auto flux_fes = new FiniteElementSpace(&mesh, &flux_fec, sdim);
-        estimator = new KellyErrorEstimator(*integ, x, flux_fes);
-
-        ThresholdRefiner refiner(*estimator);
-        refiner.SetTotalErrorFraction(0.3);
-        refiner.SetLocalErrorGoal(max_elem_error);
-        refiner.SetNCLimit(0);
-
-        x = 0.0;
-
-        refiner.Reset();
 
         int step = 0;
         while (true)
         {
 
             cout << "Step: " << step << endl
-                 << "DOF: " << fespace.GetNDofs() << endl;
+                 << "DOF: " << fespaces.GetFinestFESpace().GetNDofs() << endl;
 
 #ifdef USE_TIMING
             startTimer();
 #endif
 
-            solve(a, f, fespace, x, ess_bdr, bdr);
+
+            solve(f, fespaces, x, ess_bdr, bdr);
 
 #ifdef USE_TIMING
             printTimer();
 #endif
 
 #ifdef USE_OUTPUT
-            exact_error(step, fespace.GetNDofs(), x, error_zero, u);
-            vtk_output(x, step);
+            exact_error(step, fespaces.GetFinestFESpace().GetNDofs(), fespaces, x, error_zero, u);
+            vtk_output(fespaces, x, step);
 #endif
 
             //Stop the loop if no more elements are marked for refinement or the desired number of DOFs is reached.
-            if (fespace.GetNDofs() > max_dofs || !refine(a, f, fespace, x, error_zero, refiner))
+            if (fespaces.GetFinestFESpace().GetNDofs() > max_dofs || !refine(f, fespaces, x, error_zero))
             {
                 break;
             }
@@ -203,12 +191,9 @@ namespace AspDEQuFEL
         }
 
         cout << "Final: " << step << endl
-             << "DOF: " << fespace.GetNDofs() << endl;
+             << "DOF: " << fespaces.GetFinestFESpace().GetNDofs() << endl;
 
-        a.Update();
         f.Update();
-
-        delete estimator;
 
 #ifdef USE_OUTPUT
         output_table();
@@ -218,13 +203,13 @@ namespace AspDEQuFEL
     //----------------------------------------------------------------
     //Calculate the exact error
     //----------------------------------------------------------------
-    void Poisson::exact_error(int cycle, int dofs, GridFunction &x, GridFunction &error_zero, FunctionCoefficient &u)
+    void Poisson::exact_error(int cycle, int dofs, FiniteElementSpaceHierarchy &fespaces, GridFunction &x, GridFunction &error_zero, FunctionCoefficient &u)
     {
 
         error_values values = {};
         values.cycle = cycle;
         values.dofs = dofs;
-        values.cells = mesh.GetNE();
+        values.cells = 0;
         values.max_error = x.ComputeMaxError(u);
         values.l2_error = x.ComputeL2Error(u);
         values.relative_error = values.l2_error / error_zero.ComputeL2Error(u);
@@ -233,9 +218,9 @@ namespace AspDEQuFEL
         double p2[] = {0.25, 0.25, 0.25};
         double p3[] = {0.5, 0.5, 0.5};
 
-        values.error_p1 = abs(postprocessor1(x, mesh) - bdr_func(Vector(p1, 3)));
-        values.error_p2 = abs(postprocessor2(x, mesh) - bdr_func(Vector(p2, 3)));
-        values.error_p3 = abs(postprocessor3(x, mesh) - bdr_func(Vector(p3, 3)));
+        values.error_p1 = abs(postprocessor1(x, *fespaces.GetFinestFESpace().GetMesh()) - bdr_func(Vector(p1, 3)));
+        values.error_p2 = abs(postprocessor2(x, *fespaces.GetFinestFESpace().GetMesh()) - bdr_func(Vector(p2, 3)));
+        values.error_p3 = abs(postprocessor3(x, *fespaces.GetFinestFESpace().GetMesh()) - bdr_func(Vector(p3, 3)));
         table_vector.push_back(values);
 
         cout << "Max error for step " << cycle << ": " << setprecision(3) << scientific << values.max_error << endl;
@@ -302,11 +287,11 @@ namespace AspDEQuFEL
     //----------------------------------------------------------------
     //Create a vtk Output for the current solution
     //----------------------------------------------------------------
-    void Poisson::vtk_output(GridFunction &x, int &cycle)
+    void Poisson::vtk_output(FiniteElementSpaceHierarchy &fespaces, GridFunction &x, int &cycle)
     {
         std::ofstream output("solution-" + std::to_string(cycle) + ".vtk");
 
-        mesh.PrintVTK(output, 0);
+        fespaces.GetFinestFESpace().GetMesh()->PrintVTK(output, 0);
         x.SaveVTK(output, "u", 0);
         output.close();
     }

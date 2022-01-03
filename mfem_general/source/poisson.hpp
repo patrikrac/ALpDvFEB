@@ -33,17 +33,16 @@ namespace AspDEQuFEL
       void run();
 
    private:
-      void make_mesh();
+      Mesh *make_mesh();
 
-      void update(BilinearForm &a, LinearForm &f, FiniteElementSpace &fespace, GridFunction &x, GridFunction &error_zero);
-      void solve(BilinearForm &a, LinearForm &f, FiniteElementSpace &fespace, GridFunction &x, Array<int> &ess_bdr, FunctionCoefficient &bdr);
-      bool refine(BilinearForm &a, LinearForm &f, FiniteElementSpace &fespace, GridFunction &x, GridFunction &error_zero, ThresholdRefiner &refiner);
+      void update(LinearForm &f, FiniteElementSpaceHierarchy& fespaces, GridFunction &x, GridFunction &error_zero);
+      void solve(LinearForm &f, FiniteElementSpaceHierarchy& fespaces, GridFunction &x, Array<int> &ess_bdr, FunctionCoefficient &bdr);
+      bool refine(LinearForm &f, FiniteElementSpaceHierarchy& fespaces, GridFunction &x, GridFunction &error_zero);
 
-      void exact_error(int cycle, int dofs, GridFunction &x, GridFunction &error_zero, FunctionCoefficient &u);
+      void exact_error(int cycle, int dofs, FiniteElementSpaceHierarchy &fespaces, GridFunction &x, GridFunction &error_zero, FunctionCoefficient &u);
 
       void output_table();
-      void glvis_output(GridFunction &x);
-      void vtk_output(GridFunction &x, int &cycle);
+      void vtk_output(FiniteElementSpaceHierarchy &fespaces, GridFunction &x, int &cycle);
 
       //Configuration parameters
       double hysteresis; //derefinement safety coefficient
@@ -53,7 +52,6 @@ namespace AspDEQuFEL
       PointValueEvaluation postprocessor1, postprocessor2, postprocessor3;
 
       //Data parameters
-      Mesh mesh;
       vector<error_values> table_vector;
    };
 }
