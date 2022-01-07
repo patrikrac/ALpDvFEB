@@ -137,7 +137,7 @@ class Poisson:
         f += self.rhs*v*dx
         
         #Define the solver to be used to solve the problem
-        c = Preconditioner(a, type = "local")
+        c = Preconditioner(a, type = "bddc")
 
         return (a,f,c)
     
