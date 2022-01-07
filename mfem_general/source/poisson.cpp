@@ -62,6 +62,9 @@ namespace AspDEQuFEL
     {
         f.Assemble();
 
+        // Project the exact solution to the essential boundary DOFs.
+        x.ProjectBdrCoefficient(bdr, ess_bdr);
+
         //Create and solve the linear system.
         PoissonMultigrid *M = new PoissonMultigrid(fespaces, ess_bdr);
         M->SetCycleType(Multigrid::CycleType::VCYCLE, 1, 1);
@@ -112,6 +115,8 @@ namespace AspDEQuFEL
 
         x.SetSpace(&fespaces.GetFinestFESpace());
         error_zero.SetSpace(&fespaces.GetFinestFESpace());
+        x = 0.0;
+        error_zero = 0.0;
 
         f.Update(&fespaces.GetFinestFESpace());
 
