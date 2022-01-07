@@ -71,7 +71,7 @@ namespace AspDEQuFEL
 
         M->FormFineLinearSystem(x, f, A, X, B);
 
-        PCG(*A, *M, B, X, 1, 2000, 1e-12, 0.0);
+        PCG(*A, *M, B, X, 0, 2000, 1e-12, 0.0);
 
         M->RecoverFEMSolution(X, f, x);
     }
@@ -113,8 +113,7 @@ namespace AspDEQuFEL
         x.SetSpace(&fespaces.GetFinestFESpace());
         error_zero.SetSpace(&fespaces.GetFinestFESpace());
 
-        x = 0.0;
-        error_zero = 0.0;
+        f.Update(&fespaces.GetFinestFESpace());
 
         return true;
     }
@@ -168,7 +167,6 @@ namespace AspDEQuFEL
 #ifdef USE_TIMING
             startTimer();
 #endif
-
 
             solve(f, fespaces, x, ess_bdr, bdr);
 

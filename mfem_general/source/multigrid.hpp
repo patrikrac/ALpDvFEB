@@ -33,7 +33,7 @@ private:
         
 
         form->AddDomainIntegrator(new DiffusionIntegrator(one));
-
+        form->SetAssemblyLevel(AssemblyLevel::LEGACY);
         form->Assemble();
         bfs.Append(form);
 
