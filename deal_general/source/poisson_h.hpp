@@ -599,12 +599,8 @@ namespace AspDEQuFEL
         double error_p2 = abs(postprocessor2(dof_handler, solution) - Solution<dim>().value(Point<dim>(0.25, 0.25, 0.25)));
         double error_p3 = abs(postprocessor3(dof_handler, solution) - Solution<dim>().value(Point<dim>(0.5, 0.5, 0.5)));
 
-        std::cout << "Cycle " << cycle << ':' << std::endl
-                  << "   Number of active cells:       " << n_active_cells
-                  << std::endl
-                  << "   Number of degrees of freedom: " << n_dofs << std::endl
-                  << "Max error: " << Linfty_error << std::endl
-                  << "L2 error: " << L2_error << std::endl;
+        std::cout << "Max error: " << Linfty_error << std::endl
+            << "L2 error: " << L2_error << std::endl;
 
         convergence_table.add_value("cycle", cycle);
         convergence_table.add_value("cells", n_active_cells);
@@ -639,8 +635,6 @@ namespace AspDEQuFEL
         make_grid();
         while (true)
         {
-            std::cout << "Cycle " << cycle << ':' << std::endl
-                      << "Number of degrees of freedom: " << dof_handler.n_dofs() << std::endl;
 
 #ifdef USE_TIMING
             startTimer();
@@ -649,6 +643,9 @@ namespace AspDEQuFEL
             setup_system();
             assemble_system();
             assemble_multigrid();
+
+            std::cout << "Cycle " << cycle << ':' << std::endl
+                      << "Number of degrees of freedom: " << dof_handler.n_dofs() << std::endl;
 
             solve();
 
