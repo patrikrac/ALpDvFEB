@@ -222,7 +222,7 @@ namespace AspDEQuFEL
         constraints.clear();
         DoFTools::make_hanging_node_constraints(dof_handler, constraints);
 
-        VectorTools::interpolate_boundary_values(dof_handler, 0, BoundaryValues<dim>(), constraints);
+        VectorTools::interpolate_boundary_values(dof_handler, BoundaryValues<dim>(), constraints);
 
         constraints.close();
 
@@ -645,6 +645,8 @@ namespace AspDEQuFEL
 
             setup_system();
             assemble_system();
+            assemble_multigrid();
+
             solve();
 
 #ifdef USE_TIMING
