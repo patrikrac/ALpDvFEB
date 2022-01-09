@@ -98,7 +98,7 @@ class Poisson:
         #geo = CSG2d()
         geo.Add (brick)
 
-        return Mesh(geo.GenerateMesh(maxh=0.125))
+        return Mesh(geo.GenerateMesh(maxh=0.25))
         
 
     def setup_space(self):
