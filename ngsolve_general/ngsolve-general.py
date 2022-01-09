@@ -58,7 +58,7 @@ class Poisson:
 
         #Define the boundary function g
         #self.g = CoefficientFunction([(self.r**self.alpha)*sin(self.alpha*self.phi) if bc=="L" else (self.r**self.alpha)*sin(self.alpha*(2*math.pi + self.phi)) if bc=="I" else 0 for bc in self.mesh.GetBoundaries()])
-        #self.g = (self.r**self.alpha)*sin(self.alpha*self.phi)*(z*z)
+        self.g = (self.r**self.alpha)*sin(self.alpha*self.phi)*(z*z)
         #self.g=exp(-10*(x+y))*(z*z)
 
         #The exact solution of the problem. The mesh is divided into different materiels through a line. This is necessary in order to define teh function but can be ommited if the errror estimation isn't wanted.
