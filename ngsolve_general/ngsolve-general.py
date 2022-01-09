@@ -52,22 +52,23 @@ class Poisson:
          #=============================================
         #Define the general parameters and functions for the Problem
         #Define the parameter alpha which is dependant on the used geometry
-        #self.alpha = 1.0/2.0
-        #self.r = sqrt(x*x + y*y)
-        #self.phi = atan2(y,x)
+        self.alpha = 1.0/2.0
+        self.r = sqrt((x-0.5)*(x-0.5) + y*y)
+        self.phi = atan2(y,x-0.5)
 
         #Define the boundary function g
         #self.g = CoefficientFunction([(self.r**self.alpha)*sin(self.alpha*self.phi) if bc=="L" else (self.r**self.alpha)*sin(self.alpha*(2*math.pi + self.phi)) if bc=="I" else 0 for bc in self.mesh.GetBoundaries()])
         #self.g = (self.r**self.alpha)*sin(self.alpha*self.phi)*(z*z)
-        self.g=exp(-10*(x+y))*(z*z)
+        #self.g=exp(-10*(x+y))*(z*z)
 
         #The exact solution of the problem. The mesh is divided into different materiels through a line. This is necessary in order to define teh function but can be ommited if the errror estimation isn't wanted.
         #self.uexact = CoefficientFunction([(self.r**self.alpha)*sin(self.alpha*self.phi) if m=="upper" else (self.r**self.alpha)*sin(self.alpha*(2*math.pi + self.phi)) if m=="lower" else 0 for m in self.mesh.GetMaterials()])
-        #self.uexact = (self.r**self.alpha)*sin(self.alpha*self.phi)*(z*z)
-        self.uexact = exp(-10*(x+y))*(z*z)
+        self.uexact = (self.r**self.alpha)*sin(self.alpha*self.phi)*(z*z)
+        #self.uexact = exp(-10*(x+y))*(z*z)
 
         #Define the right hand side of the poission problem
-        self.rhs = -(200*(z*z) + 2)*exp(-10*(x+y))
+        #self.rhs = -(200*(z*z) + 2)*exp(-10*(x+y))
+        self.rhs = -2.0 * (self.r**self.alpha) * sin(self.alpha*self.phi)
         #=============================================
         
         #Generate the mesh
