@@ -512,7 +512,7 @@ namespace AspDEQuFEL
         output_customL2 << convergence_vector.size() << std::endl;
         for (size_t i = 0; i < convergence_vector.size(); i++)
         {
-            output_customL2 << convergence_vector[i].n_dofs << " " << convergence_vector[i].max_error << std::endl;
+            output_customL2 << convergence_vector[i].n_dofs << " " << convergence_vector[i].l2_error << std::endl;
         }
         output_customL2.close();
 
