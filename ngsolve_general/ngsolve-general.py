@@ -201,8 +201,7 @@ class Poisson:
             ip = self.mesh(*v.point)
             point_err = abs(approx(ip) - self.uexact(ip))
             if err < point_err: 
-                err = point_err
-        print("Alternative error: {}".format(max(abs(self.gfu-self.uexact))))         
+                err = point_err       
         return err
 
     def exact_error(self, cycle):
