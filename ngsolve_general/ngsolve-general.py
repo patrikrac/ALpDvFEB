@@ -196,20 +196,11 @@ class Poisson:
     def calculate_max_error(self):
         err = 0.0
         point_err = 0.0
-        xx = 0
-        yy = 0
-        zz = 0
         for v in self.mesh.vertices:
-            x, y, z = v.point
-            ip = self.mesh(x, y, z)
+            ip = self.mesh(*v.point)
             point_err = abs(self.gfu(ip) - self.uexact(ip))
             if err < point_err: 
                 err = point_err
-                xx = x
-                yy = y
-                zz =  z
-        
-        print(x,y,z)
         return err
 
     def exact_error(self, cycle):
