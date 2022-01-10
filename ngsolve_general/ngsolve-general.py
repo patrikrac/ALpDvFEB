@@ -203,7 +203,7 @@ class Poisson:
                 err = point_err
                 
                 
-        adj_err = abs(Integrate((self.gfu - self.uexact), self.mesh, element_wise = True))
+        adj_err = [abs(x) for x in Integrate((self.gfu - self.uexact), self.mesh, element_wise = True)]
         print("Fix is {}".format(max(adj_err)))
         return err
 
