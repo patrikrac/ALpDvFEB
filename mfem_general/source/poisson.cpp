@@ -84,6 +84,7 @@ namespace AspDEQuFEL
     //----------------------------------------------------------------
     bool Poisson::refine(LinearForm &f, FiniteElementSpaceHierarchy &fespaces, GridFunction &x, GridFunction &error_zero)
     {
+        /*
         ConstantCoefficient one(1.0);
         BilinearFormIntegrator *integ = new DiffusionIntegrator(one);
 
@@ -106,6 +107,10 @@ namespace AspDEQuFEL
         {
             return false;
         }
+        */
+
+       Mesh *mesh = new Mesh(*fespaces.GetFinestFESpace().GetMesh());
+       mesh->UniformRefinement();
 
         FiniteElementSpace &coarseFEspace = fespaces.GetFinestFESpace();
         FiniteElementSpace *fineFEspace = new FiniteElementSpace(mesh, coarseFEspace.FEColl());
