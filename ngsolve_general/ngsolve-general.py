@@ -201,7 +201,7 @@ class Poisson:
             point_err = abs(self.gfu(ip) - self.uexact(ip))
             if err < point_err: 
                 err = point_err
-                
+        print("Alternative error: {}".format(max(abs(self.gfu-self.uexact))))         
         return err
 
     def exact_error(self, cycle):
@@ -344,6 +344,4 @@ if __name__ == "__main__":
         e = Poisson(int(sys.argv[1]), int(sys.argv[2]))
         e.do()
     else: 
-        help(Mesh)
-        help(Interpolate)
         print("usage: python3.8 ngsolve-general.py <order> <max_dof>")
