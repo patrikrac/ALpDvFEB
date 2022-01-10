@@ -79,6 +79,9 @@ class Poisson:
         
         #Setup the FE-Space and the Solution vector with proper boundary conditions, as well as the space and solution for the error estimation
         (self.fes, self.gfu, self.space_flux, self.gf_flux) = self.setup_space()
+        
+        #Setup a grid function corresponding to the exact solution (necessary for error calculation)
+        self.solution = GridFunction(self.fes, autoupdate = True)
 
         #Get the Bilinear and Linear form aswell as the solver.
         (self.a, self.f, self.c) = self.setup_system()
@@ -196,11 +199,9 @@ class Poisson:
     def calculate_max_error(self):
         err = 0.0
         point_err = 0.0
-        sol = GridFunction(self.fes)
-        sol.Set(self.uexact)
         for v in self.mesh.vertices:
             ip = self.mesh(*v.point)
-            point_err = abs(self.gfu(ip) - sol(ip))
+            point_err = abs(self.gfu(ip) - self.solution(ip))
             if err < point_err: 
                 err = point_err 
         return err
@@ -215,17 +216,19 @@ class Poisson:
         
         l2_relative_error = sqrt(Integrate((self.gfu - self.uexact)**2,self.mesh)) / sqrt(Integrate(self.uexact**2, self.mesh))
         
+        self.solution.Set(self.uexact)
+        
         max_error = self.calculate_max_error()
         #max_error = max(Integrate(self.gfu, self.mesh, VOL, element_wise=True)-Integrate(self.uexact, self.mesh, VOL, element_wise=True))   
 
         ip1 = self.mesh(0.125, 0.125, 0.125)
-        error_p1 = abs(self.gfu(ip1) - self.uexact(ip1))
+        error_p1 = abs(self.gfu(ip1) - self.solution(ip1))
         
         ip2 = self.mesh(0.25, 0.25, 0.25)
-        error_p2 = abs(self.gfu(ip2) - self.uexact(ip2))
+        error_p2 = abs(self.gfu(ip2) - self.solution(ip2))
         
         ip3 = self.mesh(0.5, 0.5, 0.5)
-        error_p3 = abs(self.gfu(ip3) - self.uexact(ip3))
+        error_p3 = abs(self.gfu(ip3) - self.solution(ip3))
         
         num_cells = len([el for el in self.mesh.Elements()])
 
