@@ -195,6 +195,7 @@ class Poisson:
     
     def calculate_max_error(self):
         err = 0.0
+        point_err = 0.0
         xx = 0
         yy = 0
         zz = 0
