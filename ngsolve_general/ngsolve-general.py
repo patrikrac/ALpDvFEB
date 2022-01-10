@@ -198,7 +198,7 @@ class Poisson:
         for v in self.mesh.vertices:
             x, y, z = v.point
             ip = self.mesh(x, y, z)
-            point_err = abs(self.gfu(ip) - self.uexact(ip))
+            point_err = abs(self.uexact(ip) - self.gfu(ip))
             if err < point_err: err = point_err
         return err
 
