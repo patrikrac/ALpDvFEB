@@ -202,9 +202,6 @@ class Poisson:
             if err < point_err: 
                 err = point_err
                 
-                
-        adj_err = [abs(x) for x in Integrate((self.gfu - self.uexact), self.mesh, element_wise = True)]
-        print("Fix is {}".format(max(adj_err)))
         return err
 
     def exact_error(self, cycle):
@@ -347,6 +344,6 @@ if __name__ == "__main__":
         e = Poisson(int(sys.argv[1]), int(sys.argv[2]))
         e.do()
     else: 
-        help(Integrate)
+        help(Mesh)
         help(Interpolate)
         print("usage: python3.8 ngsolve-general.py <order> <max_dof>")
