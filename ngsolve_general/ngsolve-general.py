@@ -200,7 +200,7 @@ class Poisson:
         sol.Set(self.uexact)
         for v in self.mesh.vertices:
             ip = self.mesh(*v.point)
-            point_err = abs(self.gfu(ip) - self.sol(ip))
+            point_err = abs(self.gfu(ip) - sol(ip))
             if err < point_err: 
                 err = point_err 
         return err
