@@ -342,5 +342,6 @@ if __name__ == "__main__":
             os.makedirs(result_directory)
         e = Poisson(int(sys.argv[1]), int(sys.argv[2]))
         e.do()
-    else:    
+    else: 
+        help(GridFunction)
         print("usage: python3.8 ngsolve-general.py <order> <max_dof>")
