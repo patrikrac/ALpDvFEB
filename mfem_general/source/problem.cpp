@@ -30,12 +30,12 @@ double bdr_func(const Vector &p)
    double k = 10.0;
    return sin(k*p(0)) * cos(2*k*p(1)) * exp(p(2)); 
    
-  
-  /*
-  //Experimental tanh problem
-   double radius = sqrt(p(0) * p(0) + p(1) * p(1));
-   double k = 100;
-   return tanh(k * (radius - 1.0 / 2.0));
+   /*
+   //Experimental atan problem
+   double radius = sqrt(p(0) * p(0)+ p(1) * p(1));
+   double r_0 = 1.0/4.0;
+   double alpha = 100;
+   return atan(alpha*(radius-r_0)) * (p(2) * p(2));
    */
 }
 
@@ -68,11 +68,13 @@ double rhs_func(const Vector &p)
    
    return -2.0 * pow(radius, alpha) * sin(alpha * phi);
    */
-
   /*
-  double radius = sqrt(p(0) * p(0) + p(1) * p(1));
-  double k = 100;
-
-   return (-1.0/radius + 2.0*k*tanh(k*(radius - 1.0/2.0)))*k*(1-(tanh(k*(radius - 1.0/2.0))*tanh(k*(radius - 1.0/2.0))));
-   */
+   double radius = sqrt(p(0)*p(0)+ p(1)*p(1));
+   double r_0 = 1.0/4.0;
+   double alpha = 100;
+   double diff = radius - r_0;
+   return -(((1.0/radius)*(alpha / (1+pow(alpha,2)*pow(diff,2)))
+                  + ((2.0*pow(alpha,3)*diff) / (pow(1+pow(alpha,2)*pow(diff,2),2))))*(p(2) * p(2)) 
+                  +2.0*atan(alpha*diff));
+  */
 }
