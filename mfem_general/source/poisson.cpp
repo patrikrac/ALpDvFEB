@@ -108,11 +108,12 @@ namespace AspDEQuFEL
     //----------------------------------------------------------------
     void Poisson::solve(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace &fespace, ParGridFunction &x, Array<int> &ess_bdr, FunctionCoefficient &bdr)
     {
+        f.Assemble();
+        a.Assemble();
+
+        x.ProjectBdrCoefficient(bdr, ess_bdr);
         Array<int> ess_tdof_list;
         fespace.GetEssentialTrueDofs(ess_bdr, ess_tdof_list);
-        f.Assemble();
-
-        a.Assemble();
 
         OperatorPtr A;
         Vector B, X;
