@@ -35,15 +35,16 @@ namespace AspDEQuFEL
       void run();
 
    private:
-      ParMesh *make_mesh();
+      void make_mesh();
 
-      void solve(ParLinearForm &f, ParFiniteElementSpaceHierarchy& fespaces, ParGridFunction &x, FunctionCoefficient &bdr);
-      bool refine(ParLinearForm &f, ParFiniteElementSpaceHierarchy& fespaces, ParGridFunction &x, ParGridFunction &error_zero);
+      void update(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace &fespace, ParGridFunction &x, ParGridFunction &error_zero);
+      void solve(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace& fespace, ParGridFunction &x, Array<int> &ess_bdr, FunctionCoefficient &bdr);
+      bool refine(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace& fespace, ParGridFunction &x, ParGridFunction &error_zero, ThresholdRefiner &refiner);
 
-      void exact_error(int cycle, int dofs, ParFiniteElementSpaceHierarchy& fespaces, ParGridFunction &x, ParGridFunction &error_zero, FunctionCoefficient &u);
+      void exact_error(int cycle, int dofs, ParGridFunction &x, ParGridFunction &error_zero, FunctionCoefficient &u);
 
       //void output_table();
-      void vtk_output(ParFiniteElementSpaceHierarchy& fespaces, ParGridFunction &x);
+      void vtk_output(ParGridFunction &x);
 
       //Configuration parameters
 
@@ -56,6 +57,7 @@ namespace AspDEQuFEL
 
       //Data parameters
       vector<error_values> table_vector;
+      ParMesh *pmesh;
 
       //Parallel Parameters
       //Reorder elements
