@@ -2,6 +2,8 @@
 #include "mfem.hpp"
 #pragma once
 
+using namespace std;
+using namespace mfem;
 class PoissonMultigrid : public GeometricMultigrid
 {
 private:
