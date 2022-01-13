@@ -135,6 +135,11 @@ namespace AspDEQuFEL
             return false;
         }
 
+        if (pmesh->Nonconforming())
+      {
+         pmesh->Rebalance();
+      }
+
         ParFiniteElementSpace &coarseFEspace = fespaces.GetFinestFESpace();
         ParFiniteElementSpace *fineFEspace = new ParFiniteElementSpace(pmesh, coarseFEspace.FEColl());
 
