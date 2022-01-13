@@ -37,7 +37,7 @@ namespace AspDEQuFEL
    private:
       ParMesh *make_mesh();
 
-      void solve(ParLinearForm &f, ParFiniteElementSpaceHierarchy& fespaces, ParGridFunction &x, Array<int> &ess_bdr, FunctionCoefficient &bdr);
+      void solve(ParLinearForm &f, ParFiniteElementSpaceHierarchy& fespaces, ParGridFunction &x, FunctionCoefficient &bdr);
       bool refine(ParLinearForm &f, ParFiniteElementSpaceHierarchy& fespaces, ParGridFunction &x, ParGridFunction &error_zero);
 
       void exact_error(int cycle, int dofs, ParFiniteElementSpaceHierarchy& fespaces, ParGridFunction &x, ParGridFunction &error_zero, FunctionCoefficient &u);
