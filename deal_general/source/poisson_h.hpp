@@ -120,9 +120,6 @@ namespace AspDEQuFEL
                                                     pcout(std::cout, (this_mpi_process == 0)),
                                                     fe(order),
                                                     dof_handler(triangulation)
-    //postprocessor1(Point<dim>(0.125, 0.125, 0.125)),
-    //postprocessor2(Point<dim>(0.25, 0.25, 0.25)),
-    //postprocessor3(Point<dim>(0.5, 0.5, 0.5))
     {
     }
 
@@ -424,7 +421,7 @@ namespace AspDEQuFEL
                                           local_solution,
                                           Solution<dim>(),
                                           difference_per_cell,
-                                          QGauss<dim>(fe->degree + 1),
+                                          QGauss<dim>(fe.degree + 1),
                                           VectorTools::L2_norm);
         const double L2_error = VectorTools::compute_global_error(triangulation,
                                                                   difference_per_cell,
@@ -454,8 +451,8 @@ namespace AspDEQuFEL
               << "   Number of active cells:       " << n_active_cells
               << std::endl
               << "   Number of degrees of freedom: " << n_dofs << std::endl
-              << "L2 error: " << L2_error;
-        << "Max error: " << Linfty_error << std::endl;
+              << "L2 error: " << L2_error << std::endl
+              << "Max error: " << Linfty_error << std::endl;
 
         convergence_table.add_value("cycle", cycle);
         convergence_table.add_value("cells", n_active_cells);
@@ -524,7 +521,6 @@ namespace AspDEQuFEL
         output_results(cycle);
 #endif
         output_error();
-        
     }
 
 }
