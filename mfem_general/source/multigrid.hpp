@@ -11,8 +11,6 @@ private:
    HypreBoomerAMG* amg;
 
 public:
-   // Constructs a diffusion multigrid for the ParFiniteElementSpaceHierarchy
-   // and the array of essential boundaries
    PoissonMultigrid(ParFiniteElementSpaceHierarchy& fespaces,
                       Array<int>& ess_bdr)
       : GeometricMultigrid(fespaces), one(1.0)
