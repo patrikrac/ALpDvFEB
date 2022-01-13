@@ -1,6 +1,7 @@
 //Created by Patrik Rác
 //Source for the Poisson class
 #include "poisson.hpp"
+#include "multigrid.hpp"
 
 #ifdef USE_TIMING
 #include "Timer.hpp"
@@ -35,7 +36,7 @@ namespace AspDEQuFEL
     //----------------------------------------------------------------
     //Create the parallel mesh the problem will be solved on
     //----------------------------------------------------------------
-    void Poisson::make_mesh()
+    ParMesh *Poisson::make_mesh()
     {
         const char *mesh_file = "../data/unit_cube.mesh";
         Mesh mesh(mesh_file);
@@ -71,79 +72,64 @@ namespace AspDEQuFEL
 
         mesh.EnsureNCMesh(nc_simplices);
 
-        pmesh = new ParMesh(MPI_COMM_WORLD, mesh);
-
         cout << "Mesh generated." << endl;
-    }
 
-    //----------------------------------------------------------------
-    //Update all variables to adabt to the recently adapted mesh
-    //----------------------------------------------------------------
-    void Poisson::update(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace &fespace, ParGridFunction &x, ParGridFunction &error_zero)
-    {
-        fespace.Update();
-
-        x.Update();
-
-        error_zero.Update();
-        error_zero = 0.0;
-
-        if (pmesh->Nonconforming())
-        {
-            pmesh->Rebalance();
-
-            fespace.Update();
-            x.Update();
-        }
-
-        fespace.UpdatesFinished();
-
-        // Inform the linear and bilinear forms that the space has changed.
-        a.Update();
-        f.Update();
+        return new ParMesh(MPI_COMM_WORLD, mesh);
     }
 
     //----------------------------------------------------------------
     //Solve the Problem on the current mesh
     //----------------------------------------------------------------
-    void Poisson::solve(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace &fespace, ParGridFunction &x, Array<int> &ess_bdr, FunctionCoefficient &bdr)
+    void Poisson::solve(ParLinearForm &f, ParFiniteElementSpaceHierarchy &fespaces, ParGridFunction &x, FunctionCoefficient &bdr)
     {
         f.Assemble();
-        a.Assemble();
 
+        Array<int> ess_bdr(fespaces.GetFinestFESpace().GetParMesh()->bdr_attributes.Max());
+        ess_bdr = 1;
         x.ProjectBdrCoefficient(bdr, ess_bdr);
-        Array<int> ess_tdof_list;
-        fespace.GetEssentialTrueDofs(ess_bdr, ess_tdof_list);
+
+        PoissonMultigrid *M = new PoissonMultigrid(fespaces, ess_bdr);
+        M->SetCycleType(Multigrid::CycleType::VCYCLE, 1, 1);
 
         OperatorPtr A;
         Vector B, X;
 
-        const int copy_interior = 1;
-        a.FormLinearSystem(ess_tdof_list, x, f, A, X, B, copy_interior);
-
-        Solver *M = NULL;
-
-        HypreBoomerAMG *amg = new HypreBoomerAMG;
-        amg->SetPrintLevel(0);
-        M = amg;
+        M->FormFineLinearSystem(x, f, A, X, B);
 
         CGSolver cg(MPI_COMM_WORLD);
-        cg.SetRelTol(1e-6);
+        cg.SetRelTol(1e-12);
         cg.SetMaxIter(2000);
-        cg.SetPrintLevel(3);
-        cg.SetPreconditioner(*M);
+        cg.SetPrintLevel(1);
         cg.SetOperator(*A);
+        cg.SetPreconditioner(*M);
         cg.Mult(B, X);
-        delete M;
 
-        a.RecoverFEMSolution(X, f, x);
+        M->RecoverFineFEMSolution(X, f, x);
     }
 
     //----------------------------------------------------------------
     //Execute one refinement step and call the update funciton to adapt the other variables
     //----------------------------------------------------------------
-    bool Poisson::refine(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace &fespace, ParGridFunction &x, ParGridFunction &error_zero, ThresholdRefiner &refiner)
+    bool Poisson::refine(ParLinearForm &f, ParFiniteElementSpaceHierarchy &fespaces, ParGridFunction &x, ParGridFunction &error_zero)
     {
+        ConstantCoefficient one(1.0);
+        BilinearFormIntegrator *integ = new DiffusionIntegrator(one);
+
+        L2_FECollection flux_fec(order, fespaces.GetFinestFESpace().GetParMesh()->Dimension());
+        ParFiniteElementSpace flux_fes(fespaces.GetFinestFESpace().GetParMesh(), &flux_fec, fespaces.GetFinestFESpace().GetParMesh()->SpaceDimension());
+        FiniteElementCollection *smooth_flux_fec = NULL;
+        ParFiniteElementSpace *smooth_flux_fes = NULL;
+        smooth_flux_fec = new RT_FECollection(order - 1, fespaces.GetFinestFESpace().GetParMesh()->Dimension());
+        smooth_flux_fes = new ParFiniteElementSpace(fespaces.GetFinestFESpace().GetParMesh(), smooth_flux_fec, 1);
+
+        L2ZienkiewiczZhuEstimator estimator(*integ, x, flux_fes, *smooth_flux_fes);
+
+        ThresholdRefiner refiner(estimator);
+        refiner.SetTotalErrorFraction(0.3);
+
+        refiner.Reset();
+
+        ParMesh *pmesh = new ParMesh(*fespaces.GetFinestFESpace().GetParMesh());
         refiner.Apply(*pmesh);
 
         if (refiner.Stop())
@@ -151,8 +137,23 @@ namespace AspDEQuFEL
             return false;
         }
 
-        // 20. Update the space and interpolate the solution.
-        update(a, f, fespace, x, error_zero);
+        if (pmesh->Nonconforming())
+        {
+            pmesh->Rebalance();
+        }
+
+        ParFiniteElementSpace &coarseFEspace = fespaces.GetFinestFESpace();
+        ParFiniteElementSpace *fineFEspace = new ParFiniteElementSpace(pmesh, coarseFEspace.FEColl());
+
+        Operator *P = new TransferOperator(coarseFEspace, *fineFEspace);
+        fespaces.AddLevel(pmesh, fineFEspace, P, true, true, true);
+
+        x.SetSpace(&fespaces.GetFinestFESpace());
+        error_zero.SetSpace(&fespaces.GetFinestFESpace());
+        x = 0.0;
+        error_zero = 0.0;
+
+        f.Update(&fespaces.GetFinestFESpace());
 
         return true;
     }
@@ -164,7 +165,7 @@ namespace AspDEQuFEL
     void Poisson::run()
     {
         //Mesh Generation
-        make_mesh();
+        ParMesh *pmesh = make_mesh();
 
         //Declaration
         int dim = pmesh->Dimension();
@@ -174,53 +175,33 @@ namespace AspDEQuFEL
                     "Boundary attributes required in the mesh.");
 
         //Setup the necessary spaces and solutions for the problem
-        H1_FECollection fec(order, dim);
-        ParFiniteElementSpace fespace(pmesh, &fec);
+        H1_FECollection *fec = new H1_FECollection(order, dim);
+        ParFiniteElementSpace *fespace = new ParFiniteElementSpace(pmesh, fec);
+        ParFiniteElementSpaceHierarchy fespaces(pmesh, fespace, true, true);
 
-        ParBilinearForm a(&fespace);
-        ParLinearForm f(&fespace);
+        ParBilinearForm a(&fespaces.GetFinestFESpace());
+        ParLinearForm f(&fespaces.GetFinestFESpace());
 
-        ParGridFunction x(&fespace);
+        ParGridFunction x(&fespaces.GetFinestFESpace());
+        x = 0.0;
 
         //Grid function for calculation of the relative norm
-        ParGridFunction error_zero(&fespace);
+        ParGridFunction error_zero(&fespaces.GetFinestFESpace());
         error_zero = 0.0;
 
         FunctionCoefficient u(bdr_func);
 
-        Array<int> ess_bdr(pmesh->bdr_attributes.Max());
-        ess_bdr = 1;
-
         //Setup
-        ConstantCoefficient one(1.0);
         FunctionCoefficient rhs(rhs_func);
         FunctionCoefficient bdr(bdr_func);
 
         //Specify the Problem
-        BilinearFormIntegrator *integ = new DiffusionIntegrator(one);
-        a.AddDomainIntegrator(integ);
         f.AddDomainIntegrator(new DomainLFIntegrator(rhs));
-
-        L2_FECollection flux_fec(order, dim);
-        ParFiniteElementSpace flux_fes(pmesh, &flux_fec, sdim);
-        FiniteElementCollection *smooth_flux_fec = NULL;
-        ParFiniteElementSpace *smooth_flux_fes = NULL;
-        smooth_flux_fec = new RT_FECollection(order - 1, dim);
-        smooth_flux_fes = new ParFiniteElementSpace(pmesh, smooth_flux_fec, 1);
-
-        L2ZienkiewiczZhuEstimator estimator(*integ, x, flux_fes, *smooth_flux_fes);
-
-        ThresholdRefiner refiner(estimator);
-        refiner.SetTotalErrorFraction(0.3);
-
-        x = 0.0;
-
-        refiner.Reset();
 
         int iter = 0;
         while (true)
         {
-            HYPRE_BigInt global_dofs = fespace.GlobalTrueVSize();
+            HYPRE_BigInt global_dofs = fespaces.GetFinestFESpace().GetTrueVSize();
 
             if (myid == 0)
             {
@@ -231,7 +212,7 @@ namespace AspDEQuFEL
 #endif
             }
 
-            solve(a, f, fespace, x, ess_bdr, bdr);
+            solve(f, fespaces, x, bdr);
 
 #ifdef USE_TIMING
             if (myid == 0)
@@ -240,10 +221,10 @@ namespace AspDEQuFEL
             }
 #endif
 
-            exact_error(iter, global_dofs, x, error_zero, u);
+            exact_error(iter, global_dofs, fespaces, x, error_zero, u);
 
             //Stop the loop if no more elements are marked for refinement or the desired number of DOFs is reached.
-            if (global_dofs >= max_dofs || !refine(a, f, fespace, x, error_zero, refiner))
+            if (global_dofs >= max_dofs || !refine(f, fespaces, x, error_zero))
             {
                 if (myid == 0)
                 {
@@ -255,7 +236,7 @@ namespace AspDEQuFEL
         }
 
 #ifdef USE_OUTPUT
-        vtk_output(x);
+        vtk_output(fespaces, x);
 #endif
         delete pmesh;
 
@@ -265,13 +246,13 @@ namespace AspDEQuFEL
     //----------------------------------------------------------------
     //Calculate the exact error
     //----------------------------------------------------------------
-    void Poisson::exact_error(int cycle, int dofs, ParGridFunction &x, ParGridFunction &error_zero, FunctionCoefficient &u)
+    void Poisson::exact_error(int cycle, int dofs, ParFiniteElementSpaceHierarchy &fespaces, ParGridFunction &x, ParGridFunction &error_zero, FunctionCoefficient &u)
     {
 
         error_values values = {};
         values.cycle = cycle;
         values.dofs = dofs;
-        values.cells = pmesh->GetNE();
+        values.cells = fespaces.GetFinestFESpace().GetParMesh()->GetNE();
         values.max_error = x.ComputeMaxError(u);
         values.l2_error = x.ComputeL2Error(u);
         values.relative_error = values.l2_error / error_zero.ComputeL2Error(u);
@@ -349,10 +330,10 @@ namespace AspDEQuFEL
     //----------------------------------------------------------------
     //Create a vtk Output for the current solution
     //----------------------------------------------------------------
-    void Poisson::vtk_output(ParGridFunction &x)
+    void Poisson::vtk_output(ParFiniteElementSpaceHierarchy &fespaces, ParGridFunction &x)
     {
         ofstream output(MakeParFilename("solution", myid, ".vtk"));
-        pmesh->PrintVTK(output, 0);
+        fespaces.GetFinestFESpace().GetParMesh()->PrintVTK(output, 0);
         x.SaveVTK(output, "u", 0);
         output.close();
 
