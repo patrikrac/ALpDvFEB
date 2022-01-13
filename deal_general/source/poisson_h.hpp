@@ -5,44 +5,34 @@ The classes defined here can be modified in order to solve each specific Problem
 ---------------------------------------------------------------- */
 #include <deal.II/base/quadrature_lib.h>
 #include <deal.II/base/function.h>
-#include <deal.II/base/logstream.h>
-#include <deal.II/base/utilities.h>
-#include <deal.II/lac/dynamic_sparsity_pattern.h>
+
+#include <deal.II/lac/generic_linear_algebra.h>
+
 #include <deal.II/lac/vector.h>
 #include <deal.II/lac/full_matrix.h>
-#include <deal.II/lac/sparse_matrix.h>
 #include <deal.II/lac/solver_cg.h>
-#include <deal.II/lac/precondition.h>
 #include <deal.II/lac/affine_constraints.h>
-#include <deal.II/grid/tria.h>
+#include <deal.II/lac/dynamic_sparsity_pattern.h>
 #include <deal.II/grid/grid_generator.h>
-#include <deal.II/grid/grid_refinement.h>
+#include <deal.II/dofs/dof_handler.h>
 #include <deal.II/dofs/dof_tools.h>
+#include <deal.II/fe/fe_values.h>
 #include <deal.II/fe/fe_q.h>
 #include <deal.II/numerics/vector_tools.h>
-#include <deal.II/numerics/matrix_tools.h>
 #include <deal.II/numerics/data_out.h>
 #include <deal.II/numerics/error_estimator.h>
 
-#include <deal.II/base/convergence_table.h>
-
-#include <deal.II/fe/fe_values.h>
-#include <deal.II/base/quadrature_lib.h>
-
-#include <deal.II/fe/fe_series.h>
-#include <deal.II/numerics/smoothness_estimator.h>
+#include <deal.II/base/utilities.h>
 
 #include <deal.II/base/conditional_ostream.h>
-#include <deal.II/base/mpi.h>
+#include <deal.II/base/convergence_table.h>
 
-#include <deal.II/lac/petsc_vector.h>
-#include <deal.II/lac/petsc_sparse_matrix.h>
+#include <deal.II/base/index_set.h>
 
-#include <deal.II/lac/petsc_solver.h>
-#include <deal.II/lac/petsc_precondition.h>
+#include <deal.II/lac/sparsity_tools.h>
 
-#include <deal.II/grid/grid_tools.h>
-#include <deal.II/dofs/dof_renumbering.h>
+#include <deal.II/distributed/tria.h>
+#include <deal.II/distributed/grid_refinement.h>
 
 #include <fstream>
 #include <iostream>
@@ -72,6 +62,7 @@ namespace AspDEQuFEL
 
     private:
         void make_grid();
+
         void setup_system();
         void assemble_system();
         int get_n_dof();
@@ -96,21 +87,23 @@ namespace AspDEQuFEL
 
         ConditionalOStream pcout;
 
-        Triangulation<dim> triangulation;
+        parallel::distributed::Triangulation<dim> triangulation;
         FE_Q<dim> fe;
         DoFHandler<dim> dof_handler;
 
+        IndexSet locally_owned_dofs;
+        IndexSet locally_relevant_dofs;
         AffineConstraints<double> constraints;
 
-        PETScWrappers::MPI::SparseMatrix system_matrix;
+        LinearAlgebraPETSc::MPI::SparseMatrix system_matrix;
 
-        PETScWrappers::MPI::Vector solution;
-        PETScWrappers::MPI::Vector system_rhs;
+        LinearAlgebraPETSc::MPI::Vector local_solution;
+        LinearAlgebraPETSc::MPI::Vector system_rhs;
 
         ConvergenceTable convergence_table;
-        PointValueEvaluation<dim> postprocessor1;
-        PointValueEvaluation<dim> postprocessor2;
-        PointValueEvaluation<dim> postprocessor3;
+        //PointValueEvaluation<dim> postprocessor1;
+        //PointValueEvaluation<dim> postprocessor2;
+        //PointValueEvaluation<dim> postprocessor3;
         std::vector<metrics> convergence_vector;
     };
 
@@ -119,15 +112,17 @@ namespace AspDEQuFEL
     //The dof_handler manages enumeration and indexing of all degrees of freedom (relating to the given triangulation)
     //------------------------------
     template <int dim>
-    Poisson<dim>::Poisson(int order, int max_dof) : max_dofs(max_dof), mpi_communicator(MPI_COMM_WORLD),
+    Poisson<dim>::Poisson(int order, int max_dof) : max_dofs(max_dof),
+                                                    mpi_communicator(MPI_COMM_WORLD),
+                                                    triangulation(mpi_communicator, typename Triangulation<dim>::MeshSmoothing(Triangulation<dim>::smoothing_on_refinement | Triangulation<dim>::smoothing_on_coarsening)),
                                                     n_mpi_processes(Utilities::MPI::n_mpi_processes(mpi_communicator)),
                                                     this_mpi_process(Utilities::MPI::this_mpi_process(mpi_communicator)),
                                                     pcout(std::cout, (this_mpi_process == 0)),
                                                     fe(order),
-                                                    dof_handler(triangulation),
-                                                    postprocessor1(Point<dim>(0.125, 0.125, 0.125)),
-                                                    postprocessor2(Point<dim>(0.25, 0.25, 0.25)),
-                                                    postprocessor3(Point<dim>(0.5, 0.5, 0.5))
+                                                    dof_handler(triangulation)
+    //postprocessor1(Point<dim>(0.125, 0.125, 0.125)),
+    //postprocessor2(Point<dim>(0.25, 0.25, 0.25)),
+    //postprocessor3(Point<dim>(0.5, 0.5, 0.5))
     {
     }
 
@@ -160,7 +155,6 @@ namespace AspDEQuFEL
     template <int dim>
     void Poisson<dim>::make_grid()
     {
-        //Appropriate grid generation has to be implemented in here!
         //The default grid generated will be a unit square/cube depending on the dimensionality of the problem.
 
         GridGenerator::hyper_cube(triangulation, 0, 1);
@@ -176,28 +170,26 @@ namespace AspDEQuFEL
     template <int dim>
     void Poisson<dim>::setup_system()
     {
-        GridTools::partition_triangulation(n_mpi_processes, triangulation);
-
         dof_handler.distribute_dofs(fe);
-        DoFRenumbering::subdomain_wise(dof_handler);
+        locally_owned_dofs = dof_handler.locally_owned_dofs();
+        DoFTools::extract_locally_relevant_dofs(dof_handler, locally_relevant_dofs);
+
+        local_solution.reinit(locally_owned_dofs, mpi_communicator);
+        system_rhs.reinit(locally_owned_dofs, mpi_communicator);
 
         constraints.clear();
+        constraints.reinit(locally_relevant_dofs);
         DoFTools::make_hanging_node_constraints(dof_handler, constraints);
 
-        //VectorTools::interpolate_boundary_values(dof_handler, 0, BoundaryValues<dim>(), constraints);
+        VectorTools::interpolate_boundary_values(dof_handler, 0, BoundaryValues<dim>(), constraints);
 
         constraints.close();
 
-        DynamicSparsityPattern dsp(dof_handler.n_dofs());
+        DynamicSparsityPattern dsp(locally_relevant_dofs);
         DoFTools::make_sparsity_pattern(dof_handler, dsp, constraints, false);
-
-        const std::vector<IndexSet> locally_owned_dofs_per_proc = DoFTools::locally_owned_dofs_per_subdomain(dof_handler);
-        const IndexSet locally_owned_dofs = locally_owned_dofs_per_proc[this_mpi_process];
+        SparsityTools::distribute_sparsity_pattern(dsp, dof_handler.locally_owned_dofs(), mpi_communicator, locally_relevant_dofs);
 
         system_matrix.reinit(locally_owned_dofs, locally_owned_dofs, dsp, mpi_communicator);
-
-        solution.reinit(locally_owned_dofs, mpi_communicator);
-        system_rhs.reinit(locally_owned_dofs, mpi_communicator);
     }
 
     //------------------------------
@@ -206,7 +198,7 @@ namespace AspDEQuFEL
     template <int dim>
     void Poisson<dim>::assemble_system()
     {
-        QGauss<dim> quadrature_formula(fe.degree + 1);
+        const QGauss<dim> quadrature_formula(fe.degree + 1);
         FEValues<dim> fe_values(fe,
                                 quadrature_formula,
                                 update_values | update_gradients | update_quadrature_points | update_JxW_values);
@@ -222,7 +214,7 @@ namespace AspDEQuFEL
 
         for (const auto &cell : dof_handler.active_cell_iterators())
         {
-            if (cell->subdomain_id() == this_mpi_process)
+            if (cell->is_locally_owned())
             {
                 cell_matrix = 0;
                 cell_rhs = 0;
@@ -257,10 +249,6 @@ namespace AspDEQuFEL
 
         system_matrix.compress(VectorOperation::add);
         system_rhs.compress(VectorOperation::add);
-
-        std::map<types::global_dof_index, double> boundary_values;
-        VectorTools::interpolate_boundary_values(dof_handler, 0, Functions::ZeroFunction<dim>(), boundary_values);
-        MatrixTools::apply_boundary_values(boundary_values, system_matrix, solution, system_rhs, false);
     }
 
     //------------------------------
@@ -278,17 +266,23 @@ namespace AspDEQuFEL
     template <int dim>
     void Poisson<dim>::solve()
     {
-        SolverControl solver_control(1000, 1e-12);
-        PETScWrappers::SolverCG cg(solver_control, mpi_communicator);
+        LinearAlgebraPETSc::MPI::Vector completely_distributed_solution(locally_owned_dofs, mpi_communicator);
 
-        PETScWrappers::PreconditionBoomerAMG preconditioner(system_matrix);
+        SolverControl solver_control(2000, 1e-12);
+        LinearAlgebraPETSc::SolverCG solver(solver_control, mpi_communicator);
 
-        cg.solve(system_matrix, solution, system_rhs, preconditioner);
-        Vector<double> localized_solution(solution);
+        LinearAlgebraPETSc::MPI::PreconditionAMG preconditioner;
+        LinearAlgebraPETSc::MPI::PreconditionAMG::AdditionalData data;
+        data.symmetric_operator = true;
+        preconditioner.initialize(system_matrix, data);
 
-        constraints.distribute(localized_solution);
+        solver.solve(system_matrix, completely_distributed_solution, system_rhs, preconditioner);
+        pcout << "   Solved in " << solver_control.last_step() << " iterations."
+              << std::endl;
 
-        solution = localized_solution;
+        constraints.distribute(completely_distributed_solution);
+
+        local_solution = completely_distributed_solution;
     }
 
     //------------------------------
@@ -297,28 +291,14 @@ namespace AspDEQuFEL
     template <int dim>
     void Poisson<dim>::refine_grid()
     {
-        const Vector<double> localized_solution(solution);
+        Vector<float> estimated_error_per_cell(triangulation.n_active_cells());
+        KellyErrorEstimator<dim>::estimate(dof_handler,
+                                           QGauss<dim - 1>(fe.degree + 1),
+                                           std::map<types::boundary_id, const Function<dim> *>(),
+                                           local_solution,
+                                           estimated_error_per_cell);
 
-        Vector<float> local_error_per_cell(triangulation.n_active_cells());
-        KellyErrorEstimator<dim>::estimate(dof_handler, QGauss<dim - 1>(fe.degree + 1), {},
-                                           localized_solution,
-                                           local_error_per_cell,
-                                           ComponentMask(),
-                                           nullptr,
-                                           MultithreadInfo::n_threads(),
-                                           this_mpi_process);
-
-        const unsigned int n_local_cells = GridTools::count_cells_with_subdomain_association(triangulation, this_mpi_process);
-
-        PETScWrappers::MPI::Vector distributed_all_errors(mpi_communicator, triangulation.n_active_cells(), n_local_cells);
-        for (unsigned int i = 0; i < local_error_per_cell.size(); i++)
-        {
-            if (local_error_per_cell(i) != 0)
-                distributed_all_errors(i) = local_error_per_cell(i);
-        }
-        distributed_all_errors.compress(VectorOperation::insert);
-        const Vector<float> localized_all_errors(distributed_all_errors);
-        GridRefinement::refine_and_coarsen_fixed_number(triangulation, localized_all_errors, 0.3, 0.03);
+        parallel::distributed::GridRefinement::refine_and_coarsen_fixed_number(triangulation, estimated_error_per_cell, 0.3, 0.03);
 
         triangulation.execute_coarsening_and_refinement();
     }
@@ -329,20 +309,18 @@ namespace AspDEQuFEL
     template <int dim>
     void Poisson<dim>::output_results(const unsigned int cycle) const
     {
-        const Vector<double> localized_solution(solution);
-        if (this_mpi_process == 0)
-        {
-            std::ofstream output("solution-" + std::to_string(cycle) + ".vtk");
+        DataOut<dim> data_out;
+        data_out.attach_dof_handler(dof_handler);
+        data_out.add_data_vector(local_solution, "u");
 
-            DataOut<dim> data_out;
+        Vector<float> subdomain(triangulation.n_active_cells());
+        for (unsigned int i = 0; i < subdomain.size(); ++i)
+            subdomain(i) = triangulation.locally_owned_subdomain();
 
-            data_out.attach_dof_handler(dof_handler);
+        data_out.add_data_vector(subdomain, "subdomain");
+        data_out.build_patches();
 
-            data_out.add_data_vector(localized_solution, "u");
-
-            data_out.build_patches();
-            data_out.write_vtk(output);
-        }
+        data_out.write_vtu_with_pvtu_record("./", "solution", cycle, mpi_communicator, 2, 8);
     }
 
     template <int dim>
@@ -350,6 +328,7 @@ namespace AspDEQuFEL
     {
         if (this_mpi_process == 0)
         {
+            convergence_table.set_precision("L2", 3);
             convergence_table.set_precision("Linfty", 3);
             convergence_table.set_precision("error_p1", 3);
             convergence_table.set_precision("error_p2", 3);
@@ -361,63 +340,77 @@ namespace AspDEQuFEL
 
             convergence_table.set_tex_caption("cells", "\\# cells");
             convergence_table.set_tex_caption("dofs", "\\# dofs");
-            convergence_table.set_tex_caption("Linfty", "$\\left\\|u_h - I_hu\\right\\| _{L^\\infty}$");
-            convergence_table.set_tex_caption("error_p1", "$\\left\\|u_h(x_1) - I_hu(x_1)\\right\\| $");
-            convergence_table.set_tex_caption("error_p2", "$\\left\\|u_h(x_2) - I_hu(x_2)\\right\\| $");
-            convergence_table.set_tex_caption("error_p3", "$\\left\\|u_h(x_3) - I_hu(x_3)\\right\\| $");
+            convergence_table.set_tex_caption("L2", "$\\left\\|u_h - I_hu\\right\\| _{L_2}$");
+            convergence_table.set_tex_caption("Linfty", "$\\left\\|u_h - I_hu\\right\\| _{L_\\infty}$");
+            convergence_table.set_tex_caption("error_p1", "$|u_h(x_1) - I_hu(x_1)| $");
+            convergence_table.set_tex_caption("error_p2", "$|u_h(x_2) - I_hu(x_2)| $");
+            convergence_table.set_tex_caption("error_p3", "$|u_h(x_3) - I_hu(x_3)| $");
 
             std::ofstream error_table_file("error.tex");
             convergence_table.write_tex(error_table_file);
 
-            std::ofstream output_custom1("error_dealii.txt");
+            std::ofstream output_customMax("error_max_dealii.txt");
 
-            output_custom1 << "$deal.ii$" << std::endl;
+            output_customMax << "Deal.ii" << std::endl;
+            output_customMax << "$n_\\text{dof}$" << std::endl;
+            output_customMax << "$\\left\\|u_h - I_hu\\right\\|_{L_\\infty}$" << std::endl;
+            output_customMax << convergence_vector.size() << std::endl;
+            for (size_t i = 0; i < convergence_vector.size(); i++)
+            {
+                output_customMax << convergence_vector[i].n_dofs << " " << convergence_vector[i].max_error << std::endl;
+            }
+            output_customMax.close();
+
+            std::ofstream output_customL2("error_l2_dealii.txt");
+
+            output_customL2 << "Deal.ii" << std::endl;
+            output_customL2 << "$n_\\text{dof}$" << std::endl;
+            output_customL2 << "$\\left\\|u_h - I_hu\\right\\|_{L_2}$" << std::endl;
+            output_customL2 << convergence_vector.size() << std::endl;
+            for (size_t i = 0; i < convergence_vector.size(); i++)
+            {
+                output_customL2 << convergence_vector[i].n_dofs << " " << convergence_vector[i].l2_error << std::endl;
+            }
+            output_customL2.close();
+
+            /*
+            std::ofstream output_custom1("error_dealii_p1.txt");
+
+            output_custom1 << "$x_1$" << std::endl;
             output_custom1 << "$n_\\text{dof}$" << std::endl;
-            output_custom1 << "$\\left\\|u_h - I_hu\\right\\| $" << std::endl;
+            output_custom1 << "$|u(x_i) - u_h(x_i)|$" << std::endl;
             output_custom1 << convergence_vector.size() << std::endl;
             for (size_t i = 0; i < convergence_vector.size(); i++)
             {
-                output_custom1 << convergence_vector[i].n_dofs << " " << convergence_vector[i].max_error << std::endl;
+                output_custom1 << convergence_vector[i].n_dofs << " " << convergence_vector[i].error_p1 << std::endl;
             }
             output_custom1.close();
 
-            std::ofstream output_custom2("error_dealii_p1.txt");
+            std::ofstream output_custom2("error_dealii_p2.txt");
 
-            output_custom2 << "$\\left\\|u_h(x_1) - I_hu(x_1)\\right\\| $" << std::endl;
+            output_custom2 << "$x_2$" << std::endl;
             output_custom2 << "$n_\\text{dof}$" << std::endl;
-            output_custom2 << "$\\left\\|u_h(x) - I_hu(x)\\right\\|$" << std::endl;
+            output_custom2 << "$|u(x_i) - u_h(x_i)| $" << std::endl;
             output_custom2 << convergence_vector.size() << std::endl;
             for (size_t i = 0; i < convergence_vector.size(); i++)
             {
-                output_custom2 << convergence_vector[i].n_dofs << " " << convergence_vector[i].error_p1 << std::endl;
+                output_custom2 << convergence_vector[i].n_dofs << " " << convergence_vector[i].error_p2 << std::endl;
             }
             output_custom2.close();
 
-            std::ofstream output_custom3("error_dealii_p2.txt");
+            std::ofstream output_custom3("error_dealii_p3.txt");
 
-            output_custom3 << "$\\left\\|u_h(x_2) - I_hu(x_2)\\right\\|$" << std::endl;
+            output_custom3 << "$x_3$" << std::endl;
             output_custom3 << "$n_\\text{dof}$" << std::endl;
-            output_custom3 << "$\\left\\|u_h(x) - I_hu(x)\\right\\| $" << std::endl;
+            output_custom3 << "$|u(x_i) - u_h(x_i)| $" << std::endl;
             output_custom3 << convergence_vector.size() << std::endl;
             for (size_t i = 0; i < convergence_vector.size(); i++)
             {
-                output_custom3 << convergence_vector[i].n_dofs << " " << convergence_vector[i].error_p2 << std::endl;
+                output_custom3 << convergence_vector[i].n_dofs << " " << convergence_vector[i].error_p3 << std::endl;
             }
             output_custom3.close();
-
-            std::ofstream output_custom4("error_dealii_p3.txt");
-
-            output_custom4 << "$\\left\\|u_h(x_3) - I_hu(x_3)\\right\\|$" << std::endl;
-            output_custom4 << "$n_\\text{dof}$" << std::endl;
-            output_custom4 << "$\\left\\|u_h(x) - I_hu(x)\\right\\| $" << std::endl;
-            output_custom4 << convergence_vector.size() << std::endl;
-            for (size_t i = 0; i < convergence_vector.size(); i++)
-            {
-                output_custom4 << convergence_vector[i].n_dofs << " " << convergence_vector[i].error_p3 << std::endl;
-            }
-            output_custom4.close();
+            */
         }
-
     }
 
     //----------------------------------------------------------------
@@ -427,11 +420,20 @@ namespace AspDEQuFEL
     void Poisson<dim>::calculate_exact_error(const unsigned int cycle)
     {
         Vector<float> difference_per_cell(triangulation.n_active_cells());
+        VectorTools::integrate_difference(dof_handler,
+                                          local_solution,
+                                          Solution<dim>(),
+                                          difference_per_cell,
+                                          QGauss<dim>(fe->degree + 1),
+                                          VectorTools::L2_norm);
+        const double L2_error = VectorTools::compute_global_error(triangulation,
+                                                                  difference_per_cell,
+                                                                  VectorTools::L2_norm);
 
         const QTrapezoid<1> q_trapez;
         const QIterated<dim> q_iterated(q_trapez, fe.degree * 2 + 1);
         VectorTools::integrate_difference(dof_handler,
-                                          solution,
+                                          local_solution,
                                           Solution<dim>(),
                                           difference_per_cell,
                                           q_iterated,
@@ -452,11 +454,13 @@ namespace AspDEQuFEL
               << "   Number of active cells:       " << n_active_cells
               << std::endl
               << "   Number of degrees of freedom: " << n_dofs << std::endl
-              << "Max error: " << Linfty_error << std::endl;
+              << "L2 error: " << L2_error;
+        << "Max error: " << Linfty_error << std::endl;
 
         convergence_table.add_value("cycle", cycle);
         convergence_table.add_value("cells", n_active_cells);
         convergence_table.add_value("dofs", n_dofs);
+        convergence_table.add_value("L2", L2_error);
         convergence_table.add_value("Linfty", Linfty_error);
         convergence_table.add_value("error_p1", error_p1);
         convergence_table.add_value("error_p2", error_p2);
@@ -479,6 +483,7 @@ namespace AspDEQuFEL
     template <int dim>
     void Poisson<dim>::run()
     {
+        pcout << "Running on " << n_mpi_processes << " MPI rank(s)..." << std::endl;
 
         int cycle = 0;
         make_grid();
@@ -506,10 +511,6 @@ namespace AspDEQuFEL
             pcout << "Cycle " << cycle << std::endl;
             pcout << "DOFs: " << get_n_dof() << std::endl;
 
-#ifdef USE_OUTPUT
-            output_results(cycle);
-#endif
-
             //Condition to reach desired number of degrees of freedom
             if (get_n_dof() > max_dofs)
             {
@@ -519,6 +520,11 @@ namespace AspDEQuFEL
             refine_grid();
             cycle++;
         }
+#ifdef USE_OUTPUT
+        output_results(cycle);
+#endif
+        output_error();
+        
     }
 
 }

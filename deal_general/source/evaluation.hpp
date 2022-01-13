@@ -25,7 +25,6 @@ typedef struct metrics
 {
     double max_error;
     double l2_error;
-    double relative_error;
     double error_p1;
     double error_p2;
     double error_p3;
