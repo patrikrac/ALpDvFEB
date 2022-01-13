@@ -444,7 +444,7 @@ namespace AspDEQuFEL
         //double error_p1 = abs(postprocessor1(dof_handler, solution) - Solution<dim>().value(Point<dim>(0.125, 0.125, 0.125)));
         //double error_p2 = abs(postprocessor2(dof_handler, solution) - Solution<dim>().value(Point<dim>(0.25, 0.25, 0.25)));
         //double error_p3 = abs(postprocessor3(dof_handler, solution) - Solution<dim>().value(Point<dim>(0.5, 0.5, 0.5)));
-          double error_p1 = 0.0;
+        double error_p1 = 0.0;
         double error_p2 = 0.0;
         double error_p3 = 0.0;
 
