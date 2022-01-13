@@ -29,14 +29,13 @@ public:
    }
 
 private:
-   void ConstructBilinearForm(ParFiniteElementSpace &fespace, Array<int> &ess_bdr, bool partial_assembly)
+   void ConstructBilinearForm(ParFiniteElementSpace &fespace, Array<int> &ess_bdr)
    {
       ParBilinearForm *form = new ParBilinearForm(&fespace);
       form->AddDomainIntegrator(new DiffusionIntegrator(one));
-      if (partial_assembly)
-      {
-         form->SetAssemblyLevel(AssemblyLevel::PARTIAL);
-      }
+
+      form->SetAssemblyLevel(AssemblyLevel::LEGACY);
+
       form->Assemble();
       bfs.Append(form);
 
@@ -47,7 +46,7 @@ private:
    void ConstructCoarseOperatorAndSolver(ParFiniteElementSpace &coarse_fespace,
                                          Array<int> &ess_bdr)
    {
-      ConstructBilinearForm(coarse_fespace, ess_bdr,false);
+      ConstructBilinearForm(coarse_fespace, ess_bdr);
 
       HypreParMatrix *hypreCoarseMat = new HypreParMatrix();
       bfs.Last()->FormSystemMatrix(*essentialTrueDofs.Last(), *hypreCoarseMat);
@@ -69,7 +68,7 @@ private:
    void ConstructOperatorAndSmoother(ParFiniteElementSpace &fespace,
                                      Array<int> &ess_bdr)
    {
-      ConstructBilinearForm(fespace, ess_bdr, true);
+      ConstructBilinearForm(fespace, ess_bdr);
 
       OperatorPtr opr;
       opr.SetType(Operator::ANY_TYPE);
