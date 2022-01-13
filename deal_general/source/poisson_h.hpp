@@ -417,6 +417,7 @@ namespace AspDEQuFEL
             }
             output_custom4.close();
         }
+
     }
 
     //----------------------------------------------------------------
@@ -498,7 +499,7 @@ namespace AspDEQuFEL
             }
 #endif
 
-            //calculate_exact_error(cycle);
+            calculate_exact_error(cycle);
             pcout << "Cycle " << cycle << std::endl;
             pcout << "DOFs: " << get_n_dof() << std::endl;
 
