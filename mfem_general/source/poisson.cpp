@@ -351,9 +351,20 @@ namespace AspDEQuFEL
     //----------------------------------------------------------------
     void Poisson::vtk_output(ParGridFunction &x)
     {
-        std::ofstream output(MakeParFilename("solution", myid, ".vtk"));
+        ofstream output(MakeParFilename("solution", myid, ".vtk"));
         pmesh->PrintVTK(output, 0);
         x.SaveVTK(output, "u", 0);
         output.close();
+
+        if (myid == 0)
+        {
+            ofstream output("solution.visit");
+            output << "!NBLOCKS " << num_procs << endl;
+            for (int proc = 0; proc < num_procs; proc++)
+            {
+                output << MakeParFilename("solution", proc, ".vtk") << endl;
+            }
+            output.close();
+        }
     }
 }
