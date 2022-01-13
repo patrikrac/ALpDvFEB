@@ -201,7 +201,7 @@ namespace AspDEQuFEL
         int iter = 0;
         while (true)
         {
-            HYPRE_BigInt global_dofs = fespaces.GetFinestFESpace().GetNDofs();
+            HYPRE_BigInt global_dofs = fespaces.GetFinestFESpace().GetTrueVSize();
 
             if (myid == 0)
             {
