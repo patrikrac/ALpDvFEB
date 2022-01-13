@@ -349,9 +349,11 @@ namespace AspDEQuFEL
     //----------------------------------------------------------------
     void Poisson::vtk_output(ParGridFunction &x)
     {
-        pmesh->PrintVTU("grid/");
+        std::ofstream output("solution.vtk");
 
-        x.Save("solution");
+        pmesh->PrintVTK(output, 0);
+        x.SaveVTK(output, "u", 0);
+        output.close();
     }
 
 }
