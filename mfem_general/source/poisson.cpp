@@ -281,7 +281,7 @@ namespace AspDEQuFEL
         //values.error_p1 = abs(postprocessor1(x, pmesh) - bdr_func(Vector(p1, 3)));
         //values.error_p2 = abs(postprocessor2(x, pmesh) - bdr_func(Vector(p2, 3)));
         //values.error_p3 = abs(postprocessor3(x, pmesh) - bdr_func(Vector(p3, 3)));
-        //table_vector.push_back(values);
+        table_vector.push_back(values);
         if (myid == 0)
         {
             cout << "Max error for step " << cycle << ": " << setprecision(3) << scientific << values.max_error << endl;
