@@ -281,7 +281,7 @@ namespace AspDEQuFEL
         SolverControl solver_control(1000, 1e-12);
         PETScWrappers::SolverCG cg(solver_control, mpi_communicator);
 
-        PETScWrappers::PreconditionBlockJacobi preconditioner(system_matrix);
+        PETScWrappers::PreconditionBoomerAMG preconditioner(system_matrix);
 
         cg.solve(system_matrix, solution, system_rhs, preconditioner);
         Vector<double> localized_solution(solution);
