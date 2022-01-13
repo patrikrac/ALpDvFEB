@@ -80,10 +80,12 @@ namespace AspDEQuFEL
     //----------------------------------------------------------------
     //Solve the Problem on the current mesh
     //----------------------------------------------------------------
-    void Poisson::solve(ParLinearForm &f, ParFiniteElementSpaceHierarchy &fespaces, ParGridFunction &x, Array<int> &ess_bdr, FunctionCoefficient &bdr)
+    void Poisson::solve(ParLinearForm &f, ParFiniteElementSpaceHierarchy &fespaces, ParGridFunction &x, FunctionCoefficient &bdr)
     {
         f.Assemble();
 
+        Array<int> ess_bdr(fespaces.GetFinestFESpace().GetParMesh()->bdr_attributes.Max());
+        ess_bdr = 1;
         x.ProjectBdrCoefficient(bdr, ess_bdr);
 
         PoissonMultigrid *M = new PoissonMultigrid(fespaces, ess_bdr);
@@ -136,9 +138,9 @@ namespace AspDEQuFEL
         }
 
         if (pmesh->Nonconforming())
-      {
-         pmesh->Rebalance();
-      }
+        {
+            pmesh->Rebalance();
+        }
 
         ParFiniteElementSpace &coarseFEspace = fespaces.GetFinestFESpace();
         ParFiniteElementSpace *fineFEspace = new ParFiniteElementSpace(pmesh, coarseFEspace.FEColl());
@@ -189,9 +191,6 @@ namespace AspDEQuFEL
 
         FunctionCoefficient u(bdr_func);
 
-        Array<int> ess_bdr(pmesh->bdr_attributes.Max());
-        ess_bdr = 1;
-
         //Setup
         FunctionCoefficient rhs(rhs_func);
         FunctionCoefficient bdr(bdr_func);
@@ -213,7 +212,7 @@ namespace AspDEQuFEL
 #endif
             }
 
-            solve(f, fespaces, x, ess_bdr, bdr);
+            solve(f, fespaces, x, bdr);
 
 #ifdef USE_TIMING
             if (myid == 0)
@@ -222,7 +221,7 @@ namespace AspDEQuFEL
             }
 #endif
 
-            exact_error(iter, global_dofs, fespaces,  x, error_zero, u);
+            exact_error(iter, global_dofs, fespaces, x, error_zero, u);
 
             //Stop the loop if no more elements are marked for refinement or the desired number of DOFs is reached.
             if (global_dofs >= max_dofs || !refine(f, fespaces, x, error_zero))
