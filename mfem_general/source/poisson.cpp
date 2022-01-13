@@ -104,7 +104,7 @@ namespace AspDEQuFEL
         cg.SetPreconditioner(*M);
         cg.Mult(B, X);
 
-        M->RecoverFEMSolution(X, f, x);
+        M->RecoverFineFEMSolution(X, f, x);
     }
 
     //----------------------------------------------------------------
