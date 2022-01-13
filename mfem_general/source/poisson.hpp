@@ -27,7 +27,7 @@ namespace AspDEQuFEL
    {
    public:
       Poisson(int num_procs, int myid, int order, int max_iters) : num_procs(num_procs), myid(myid),
-                                                                   max_dofs(max_iters), reorder_mesh(0), nc_simplices(true),
+                                                                   max_dofs(max_iters), reorder_mesh(0), nc_simplices(false),
                                                                    hysteresis(0.2), max_elem_error(1.0e-12), order(order),
                                                                    postprocessor1({0.125, 0.125, 0.125}), postprocessor2({0.25, 0.25, 0.25}), postprocessor3({0.5, 0.5, 0.5})
       {
