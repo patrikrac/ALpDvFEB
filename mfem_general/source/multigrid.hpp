@@ -8,12 +8,12 @@ class PoissonMultigrid : public GeometricMultigrid
 {
 private:
    ConstantCoefficient one;
-   HypreBoomerAMG* amg;
+   HypreBoomerAMG *amg;
 
 public:
-   PoissonMultigrid(ParFiniteElementSpaceHierarchy& fespaces,
-                      Array<int>& ess_bdr)
-      : GeometricMultigrid(fespaces), one(1.0)
+   PoissonMultigrid(ParFiniteElementSpaceHierarchy &fespaces,
+                    Array<int> &ess_bdr)
+       : GeometricMultigrid(fespaces), one(1.0)
    {
       ConstructCoarseOperatorAndSolver(fespaces.GetFESpaceAtLevel(0), ess_bdr);
 
@@ -29,10 +29,14 @@ public:
    }
 
 private:
-   void ConstructBilinearForm(ParFiniteElementSpace& fespace, Array<int>& ess_bdr)
+   void ConstructBilinearForm(ParFiniteElementSpace &fespace, Array<int> &ess_bdr, bool partial_assembly)
    {
-      ParBilinearForm* form = new ParBilinearForm(&fespace);
+      ParBilinearForm *form = new ParBilinearForm(&fespace);
       form->AddDomainIntegrator(new DiffusionIntegrator(one));
+      if (partial_assembly)
+      {
+         form->SetAssemblyLevel(AssemblyLevel::PARTIAL);
+      }
       form->Assemble();
       bfs.Append(form);
 
@@ -40,18 +44,18 @@ private:
       fespace.GetEssentialTrueDofs(ess_bdr, *essentialTrueDofs.Last());
    }
 
-   void ConstructCoarseOperatorAndSolver(ParFiniteElementSpace& coarse_fespace,
-                                         Array<int>& ess_bdr)
+   void ConstructCoarseOperatorAndSolver(ParFiniteElementSpace &coarse_fespace,
+                                         Array<int> &ess_bdr)
    {
-      ConstructBilinearForm(coarse_fespace, ess_bdr);
+      ConstructBilinearForm(coarse_fespace, ess_bdr,false);
 
-      HypreParMatrix* hypreCoarseMat = new HypreParMatrix();
+      HypreParMatrix *hypreCoarseMat = new HypreParMatrix();
       bfs.Last()->FormSystemMatrix(*essentialTrueDofs.Last(), *hypreCoarseMat);
 
       amg = new HypreBoomerAMG(*hypreCoarseMat);
       amg->SetPrintLevel(-1);
 
-      CGSolver* pcg = new CGSolver(MPI_COMM_WORLD);
+      CGSolver *pcg = new CGSolver(MPI_COMM_WORLD);
       pcg->SetPrintLevel(-1);
       pcg->SetMaxIter(10);
       pcg->SetRelTol(sqrt(1e-4));
@@ -62,10 +66,10 @@ private:
       AddLevel(hypreCoarseMat, pcg, true, true);
    }
 
-   void ConstructOperatorAndSmoother(ParFiniteElementSpace& fespace,
-                                     Array<int>& ess_bdr)
+   void ConstructOperatorAndSmoother(ParFiniteElementSpace &fespace,
+                                     Array<int> &ess_bdr)
    {
-      ConstructBilinearForm(fespace, ess_bdr);
+      ConstructBilinearForm(fespace, ess_bdr, true);
 
       OperatorPtr opr;
       opr.SetType(Operator::ANY_TYPE);
@@ -75,7 +79,7 @@ private:
       Vector diag(fespace.GetTrueVSize());
       bfs.Last()->AssembleDiagonal(diag);
 
-      Solver* smoother = new OperatorChebyshevSmoother(*opr, diag,
+      Solver *smoother = new OperatorChebyshevSmoother(*opr, diag,
                                                        *essentialTrueDofs.Last(), 2, fespace.GetParMesh()->GetComm());
 
       AddLevel(opr.Ptr(), smoother, true, true);
