@@ -201,15 +201,16 @@ namespace AspDEQuFEL
         f.AddDomainIntegrator(new DomainLFIntegrator(rhs));
 
         L2_FECollection flux_fec(order, dim);
+        ParFiniteElementSpace flux_fes(pmesh, &flux_fec, sdim);
+        FiniteElementCollection *smooth_flux_fec = NULL;
+        ParFiniteElementSpace *smooth_flux_fes = NULL;
+        smooth_flux_fec = new RT_FECollection(order - 1, dim);
+        smooth_flux_fes = new ParFiniteElementSpace(pmesh, smooth_flux_fec, 1);
 
-        auto flux_fes = new ParFiniteElementSpace(pmesh, &flux_fec, sdim);
-        KellyErrorEstimator estimator(*integ, x, flux_fes);
+        L2ZienkiewiczZhuEstimator estimator(*integ, x, flux_fes, *smooth_flux_fes);
 
         ThresholdRefiner refiner(estimator);
-        refiner.SetTotalErrorFraction(0.3); // use purely local threshold
-        refiner.SetLocalErrorGoal(max_elem_error);
-        refiner.PreferConformingRefinement();
-        refiner.SetNCLimit(0);
+        refiner.SetTotalErrorFraction(0.3);
 
         x = 0.0;
 
@@ -281,7 +282,7 @@ namespace AspDEQuFEL
         //values.error_p1 = abs(postprocessor1(x, pmesh) - bdr_func(Vector(p1, 3)));
         //values.error_p2 = abs(postprocessor2(x, pmesh) - bdr_func(Vector(p2, 3)));
         //values.error_p3 = abs(postprocessor3(x, pmesh) - bdr_func(Vector(p3, 3)));
-        table_vector.push_back(values);
+        //table_vector.push_back(values);
         if (myid == 0)
         {
             cout << "Max error for step " << cycle << ": " << setprecision(3) << scientific << values.max_error << endl;
@@ -349,17 +350,9 @@ namespace AspDEQuFEL
     //----------------------------------------------------------------
     void Poisson::vtk_output(ParGridFunction &x)
     {
-
-        Mesh mesh(*pmesh);
-        GridFunction x_loc(x);
-         if (myid == 0)
-         {
-            std::ofstream output("solution.vtk");
-            mesh.PrintVTK(output, 0);
-            x_loc.SaveVTK(output, "u", 0);
-            output.close();
-         }
-
+        std::ofstream output(MakeParFilename("solution", myid, ".vtu"));
+        pmesh->PrintVTK(output, 0);
+        x.SaveVTK(output, "u", 0);
+        output.close();
     }
-
 }
