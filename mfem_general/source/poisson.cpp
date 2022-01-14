@@ -128,7 +128,7 @@ namespace AspDEQuFEL
         M = amg;
 
         CGSolver cg(MPI_COMM_WORLD);
-        cg.SetRelTol(1e-6);
+        cg.SetRelTol(1e-12);
         cg.SetMaxIter(2000);
         cg.SetPrintLevel(3);
         cg.SetPreconditioner(*M);
@@ -217,6 +217,7 @@ namespace AspDEQuFEL
 
         refiner.Reset();
 
+        double timing = 0.0;
         int iter = 0;
         while (true)
         {
@@ -236,11 +237,11 @@ namespace AspDEQuFEL
 #ifdef USE_TIMING
             if (myid == 0)
             {
-                printTimer();
+                timing = printTimer();
             }
 #endif
 
-            exact_error(iter, global_dofs, x, error_zero, u);
+            exact_error(iter, timing, global_dofs, x, error_zero, u);
 
             //Stop the loop if no more elements are marked for refinement or the desired number of DOFs is reached.
             if (global_dofs >= max_dofs || !refine(a, f, fespace, x, error_zero, refiner))
@@ -265,16 +266,16 @@ namespace AspDEQuFEL
     //----------------------------------------------------------------
     //Calculate the exact error
     //----------------------------------------------------------------
-    void Poisson::exact_error(int cycle, int dofs, ParGridFunction &x, ParGridFunction &error_zero, FunctionCoefficient &u)
+    void Poisson::exact_error(int cycle, int dofs, double time, ParGridFunction &x, ParGridFunction &error_zero, FunctionCoefficient &u)
     {
 
         error_values values = {};
         values.cycle = cycle;
         values.dofs = dofs;
+        values.time = time;
         values.cells = pmesh->GetNE();
         values.max_error = x.ComputeMaxError(u);
         values.l2_error = x.ComputeL2Error(u);
-        values.relative_error = values.l2_error / error_zero.ComputeL2Error(u);
 
         double p1[] = {0.125, 0.125, 0.125};
         double p2[] = {0.25, 0.25, 0.25};
@@ -291,60 +292,87 @@ namespace AspDEQuFEL
         }
     }
 
-    /*
     //----------------------------------------------------------------
     //Output the table containing the calcualted errors
     //----------------------------------------------------------------
-    //TODO: print the error (of stream for single processor, check for permission)
     void Poisson::output_table()
     {
-    
-    std::ofstream output("table.tex");
-    std::ofstream output_max("error_mfem.txt");
-    std::ofstream output_p1("error_p1.txt");
-    std::ofstream output_p2("error_p2.txt");
-    std::ofstream output_p3("error_p3.txt");
+        if (myid == 0)
+        {
+            std::ofstream output("table.tex");
+            std::ofstream output_max("error_max_mfem.txt");
+            std::ofstream output_l2("error_l2_mfem.txt");
 
-    output_max << "MFEM" << endl;
-    output_max << "$n_\\text{dof}$" << endl;
-    output_max << "$\\left\\|u - u_h\\right\\| _{L^\\infty}$" << endl;
-    output_max << table_vector.size() << endl;
+            std::ofstream output_time_dof("time_dof.txt");
+            std::ofstream output_time_l2("time_dof.txt");
+            std::ofstream output_time_max("time_dof.txt");
+            //std::ofstream output_p1("error_p1.txt");
+            //std::ofstream output_p2("error_p2.txt");
+            //std::ofstream output_p3("error_p3.txt");
 
-    output_p1 << "MFEM" << endl;
-    output_p1 << "$n_\\text{dof}$" << endl;
-    output_p1 << "$\\left\\|u(x_1) - u_h(x_1)\\right\\| $" << endl;
-    output_p1 << table_vector.size() << endl;
+            output_max << "MFEM" << endl;
+            output_max << "$n_\\text{dof}$" << endl;
+            output_max << "$\\left\\|u_h - I_hu\\right\\| _{L_\\infty}$" << endl;
+            output_max << table_vector.size() << endl;
 
-    output_p2 << "MFEM" << endl;
-    output_p2 << "$n_\\text{dof}$" << endl;
-    output_p2 << "$\\left\\|u(x_2) - u_h(x_2)\\right\\| $" << endl;
-    output_p2 << table_vector.size() << endl;
+            output_l2 << "MFEM" << endl;
+            output_l2 << "$n_\\text{dof}$" << endl;
+            output_l2 << "$\\left\\|u_h - I_hu\\right\\| _{L_2}$" << endl;
+            output_l2 << table_vector.size() << endl;
 
-    output_p3 << "MFEM" << endl;
-    output_p3 << "$n_\\text{dof}$" << endl;
-    output_p3 << "$\\left\\|u(x_3) - u_h(x_3)\\right\\| $" << endl;
-    output_p3 << table_vector.size() << endl;
+            output_time_dof << "MFEM" << endl;
+            output_time_dof << "$n_\\text{dof}$" << endl;
+            output_time_dof << "Time [s]" << endl;
+            output_time_dof << table_vector.size() << endl;
 
-    output << "\\begin{table}[h]" << endl;
-    output << "\t\\begin{center}" << endl;
-    output << "\t\t\\begin{tabular}{|c|c|c|c|c|} \\hline" << endl;
+            output_time_l2 << "MFEM" << endl;
+            output_time_l2 << "$\\left\\|u_h - I_hu\\right\\| _{L_2}$" << endl;
+            output_time_l2 << "Time [s]" << endl;
+            output_time_l2 << table_vector.size() << endl;
 
-    output << "\t\t\tcycle & \\# cells & \\# dofs & $\\norm{u - u_h}_{L^\\infty}$ & $\\dfrac{\\norm{u - u_h}_{L^\\infty}}{\\norm{u}_{L^\\infty}}$\\\\ \\hline" << endl;
-    for (int i = 0; i < table_vector.size(); i++)
-    {
-        output << "\t\t\t" << table_vector[i].cycle << " & " << table_vector[i].cells << " & " << table_vector[i].dofs << " & " << setprecision(3) << scientific << table_vector[i].error << " & " << setprecision(3) << scientific << table_vector[i].relative_error << "\\\\ \\hline" << endl;
-        output_max << table_vector[i].dofs << " " << table_vector[i].error << endl;
-        output_p1 << table_vector[i].dofs << " " << table_vector[i].error_p1 << endl;
-        output_p2 << table_vector[i].dofs << " " << table_vector[i].error_p2 << endl;
-        output_p3 << table_vector[i].dofs << " " << table_vector[i].error_p3 << endl;
+            output_time_max << "MFEM" << endl;
+            output_time_max << "$\\left\\|u_h - I_hu\\right\\| _{L_\\infty}$" << endl;
+            output_time_max << "Time [s]" << endl;
+            output_time_max << table_vector.size() << endl;
+            /*
+            output_p1 << "$x_1$" << endl;
+            output_p1 << "$n_\\text{dof}$" << endl;
+            output_p1 << "$|u(x_i) - u_h(x_i)|$" << endl;
+            output_p1 << table_vector.size() << endl;
+
+            output_p2 << "$x_2$" << endl;
+            output_p2 << "$n_\\text{dof}$" << endl;
+            output_p2 << "$|u(x_i) - u_h(x_i)|$" << endl;
+            output_p2 << table_vector.size() << endl;
+
+            output_p3 << "$x_3$" << endl;
+            output_p3 << "$n_\\text{dof}$" << endl;
+            output_p3 << "$|u(x_i) - u_h(x_i)|$" << endl;
+            output_p3 << table_vector.size() << endl;
+            */
+            output << "\\begin{table}[h]" << endl;
+            output << "\t\\begin{center}" << endl;
+            output << "\t\t\\begin{tabular}{|c|c|c|c|c|} \\hline" << endl;
+
+            output << "\t\t\tcycle & \\# cells & \\# dofs & $\\left\\|u_h - I_hu\\right\\| _{L_2}$ & $\\left\\|u_h - I_hu\\right\\| _{L_\\infty}$\\\\ \\hline" << endl;
+            for (int i = 0; i < table_vector.size(); i++)
+            {
+                output << "\t\t\t" << table_vector[i].cycle << " & " << table_vector[i].cells << " & " << table_vector[i].dofs << " & " << setprecision(3) << scientific << table_vector[i].l2_error << " & " << setprecision(3) << scientific << table_vector[i].max_error << "\\\\ \\hline" << endl;
+                output_max << table_vector[i].dofs << " " << table_vector[i].max_error << endl;
+                output_l2 << table_vector[i].dofs << " " << table_vector[i].l2_error << endl;
+                output_time_dof << table_vector[i].time << " " << table_vector[i].dofs << endl;
+                output_time_l2 << table_vector[i].time << " " << table_vector[i].l2_error << endl;
+                output_time_max << table_vector[i].time << " " << table_vector[i].max_error << endl;
+                //output_p1 << table_vector[i].dofs << " " << table_vector[i].error_p1 << endl;
+                //output_p2 << table_vector[i].dofs << " " << table_vector[i].error_p2 << endl;
+                //output_p3 << table_vector[i].dofs << " " << table_vector[i].error_p3 << endl;
+            }
+
+            output << "\t\t\\end{tabular}" << endl;
+            output << "\t\\end{center}" << endl;
+            output << "\\end{table}" << endl;
+        }
     }
-
-    output << "\t\t\\end{tabular}" << endl;
-    output << "\t\\end{center}" << endl;
-    output << "\\end{table}" << endl;
-
-    }
-*/
 
     //----------------------------------------------------------------
     //Create a vtk Output for the current solution
