@@ -288,7 +288,7 @@ namespace AspDEQuFEL
     template <int dim>
     void Poisson<dim>::refine_grid()
     {
-        Vector<float> estimated_error_per_cell(triangulation.n_locally_owned_active_cells());
+        Vector<float> estimated_error_per_cell(triangulation.n_active_cells());
         pcout << "Estimation started" << std::endl;
         KellyErrorEstimator<dim>::estimate(dof_handler,
                                            QGauss<dim - 1>(fe.degree + 1),
