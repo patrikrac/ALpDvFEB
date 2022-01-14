@@ -514,7 +514,8 @@ namespace AspDEQuFEL
                 break;
             }
 
-            refine_grid();
+            //refine_grid();
+            triangulation.refine_global(1);
             cycle++;
         }
 #ifdef USE_OUTPUT
