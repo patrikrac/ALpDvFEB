@@ -118,11 +118,10 @@ namespace AspDEQuFEL
 
         a.FormLinearSystem(ess_tdof_list, x, f, A, X, B);
 
-
         HypreBoomerAMG *amg = new HypreBoomerAMG(A);
         amg->SetPrintLevel(0);
 
-        HyprePCG pcg(MPI_COMM_WORLD);
+        HyprePCG pcg(A);
         pcg.SetTol(1e-12);
         pcg.SetMaxIter(2000);
         pcg.SetPrintLevel(3);
