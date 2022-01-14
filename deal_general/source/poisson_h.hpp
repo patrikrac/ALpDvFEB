@@ -291,9 +291,13 @@ namespace AspDEQuFEL
         Vector<float> estimated_error_per_cell(triangulation.n_active_cells());
         KellyErrorEstimator<dim>::estimate(dof_handler,
                                            QGauss<dim - 1>(fe.degree + 1),
-                                           std::map<types::boundary_id, const Function<dim> *>(),
+                                           {},
                                            local_solution,
-                                           estimated_error_per_cell);
+                                           estimated_error_per_cell,
+                                           CompinentMask(),
+                                           nullptr,
+                                           MultithreadInfo::n_threads(),
+                                           this_mpi_process);
 
         parallel::distributed::GridRefinement::refine_and_coarsen_fixed_number(triangulation, estimated_error_per_cell, 0.3, 0.03);
 
@@ -504,7 +508,7 @@ namespace AspDEQuFEL
             }
 #endif
 
-            calculate_exact_error(cycle);
+            //calculate_exact_error(cycle);
             pcout << "Cycle " << cycle << std::endl;
             pcout << "DOFs: " << get_n_dof() << std::endl;
 
@@ -514,14 +518,13 @@ namespace AspDEQuFEL
                 break;
             }
 
-            //refine_grid();
-            triangulation.refine_global(1);
+            refine_grid();
             cycle++;
         }
 #ifdef USE_OUTPUT
         output_results(cycle);
 #endif
-        output_error();
+        //output_error();
     }
 
 }
