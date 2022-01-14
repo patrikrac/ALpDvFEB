@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
 {
     if (argc < 3 || argc > 4)
     {
-        std::cout << "Usage: ./deal_general order max_dofs" << std::endl;
+        std::cout << "Usage: ./dealii_general order max_dofs" << std::endl;
         return -1;
     }
     try
