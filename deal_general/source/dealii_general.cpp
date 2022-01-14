@@ -7,8 +7,8 @@ The classes defined here can be modified in order to solve each specific Problem
 #include "poisson_h.hpp"
 #include "poisson_hp.hpp"
 
- using namespace dealii;
- 
+using namespace dealii;
+
 int main(int argc, char *argv[])
 {
     if (argc < 3 || argc > 4)
@@ -16,10 +16,37 @@ int main(int argc, char *argv[])
         std::cout << "Usage: ./deal_general order max_dofs" << std::endl;
         return -1;
     }
+    try
+    {
+        Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
 
-    Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
-
-    AspDEQuFEL::Poisson<3> l(std::atoi(argv[1]), std::atoi(argv[2]));
-    l.run();
+        AspDEQuFEL::Poisson<3> l(std::atoi(argv[1]), std::atoi(argv[2]));
+        l.run();
+    }
+    catch (std::exception &exc)
+    {
+        std::cerr << std::endl
+                  << std::endl
+                  << "----------------------------------------------------"
+                  << std::endl;
+        std::cerr << "Exception on processing: " << std::endl
+                  << exc.what() << std::endl
+                  << "Aborting!" << std::endl
+                  << "----------------------------------------------------"
+                  << std::endl;
+        return 1;
+    }
+    catch (...)
+    {
+        std::cerr << std::endl
+                  << std::endl
+                  << "----------------------------------------------------"
+                  << std::endl;
+        std::cerr << "Unknown exception!" << std::endl
+                  << "Aborting!" << std::endl
+                  << "----------------------------------------------------"
+                  << std::endl;
+        return 1;
+    }
     return 0;
 }
