@@ -72,8 +72,6 @@ namespace AspDEQuFEL
         mesh.EnsureNCMesh(nc_simplices);
 
         pmesh = new ParMesh(MPI_COMM_WORLD, mesh);
-
-        cout << "Mesh generated." << endl;
     }
 
     //----------------------------------------------------------------

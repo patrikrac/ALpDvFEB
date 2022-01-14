@@ -1,5 +1,5 @@
 #!/bin/bash -l
-#PBS -N dealii_solver
+#PBS -N mfem_solver
 #PBS -l nodes=4:ppn=32
 #PBS -l walltime=1:00:00
 #PBS -q normal
