@@ -290,13 +290,9 @@ namespace AspDEQuFEL
     {
         Vector<float> estimated_error_per_cell(triangulation.n_active_cells());
         pcout << "Estimation started" << std::endl;
-        KellyErrorEstimator<dim>::estimate(dof_handler,
-                                           QGauss<dim - 1>(fe.degree + 1),
-                                           std::map<types::boundary_id, const Function<dim> *>(),
-                                           local_solution,
-                                           estimated_error_per_cell);
+        KellyErrorEstimator<dim>::estimate(dof_handler, QGauss<dim - 1>(fe.degree + 1), {}, local_solution, estimated_error_per_cell);
         pcout << "Estimation done" << std::endl;
-        parallel::distributed::GridRefinement::refine_and_coarsen_fixed_number(triangulation, estimated_error_per_cell, 0.3, 0.03);
+        parallel::distributed::GridRefinement::refine_and_coarsen_fixed_number(triangulation, estimated_error_per_cell, 0.15, 0);
 
         triangulation.execute_coarsening_and_refinement();
     }
