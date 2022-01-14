@@ -294,7 +294,7 @@ namespace AspDEQuFEL
                                            {},
                                            local_solution,
                                            estimated_error_per_cell,
-                                           CompinentMask(),
+                                           ComponentMask(),
                                            nullptr,
                                            MultithreadInfo::n_threads(),
                                            this_mpi_process);
