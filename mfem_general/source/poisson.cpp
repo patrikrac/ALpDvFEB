@@ -113,25 +113,21 @@ namespace AspDEQuFEL
         Array<int> ess_tdof_list;
         fespace.GetEssentialTrueDofs(ess_bdr, ess_tdof_list);
 
-        OperatorPtr A;
+        HypreParMatrix A;
         Vector B, X;
 
         a.FormLinearSystem(ess_tdof_list, x, f, A, X, B);
 
-        Solver *M = NULL;
 
-        HypreBoomerAMG *amg = new HypreBoomerAMG;
+        HypreBoomerAMG *amg = new HypreBoomerAMG(A);
         amg->SetPrintLevel(0);
-        M = amg;
 
-        CGSolver cg(MPI_COMM_WORLD);
-        cg.SetRelTol(1e-12);
-        cg.SetMaxIter(2000);
-        cg.SetPrintLevel(3);
-        cg.SetPreconditioner(*M);
-        cg.SetOperator(*A);
-        cg.Mult(B, X);
-        delete M;
+        HyprePCG pcg(MPI_COMM_WORLD);
+        pcg.SetTol(1e-12);
+        pcg.SetMaxIter(2000);
+        pcg.SetPrintLevel(3);
+        pcg.SetPreconditioner(*amg);
+        pcg.Mult(B, X);
 
         a.RecoverFEMSolution(X, f, x);
     }
