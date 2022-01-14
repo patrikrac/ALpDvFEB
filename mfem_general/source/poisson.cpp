@@ -116,8 +116,7 @@ namespace AspDEQuFEL
         OperatorPtr A;
         Vector B, X;
 
-        const int copy_interior = 1;
-        a.FormLinearSystem(ess_tdof_list, x, f, A, X, B, copy_interior);
+        a.FormLinearSystem(ess_tdof_list, x, f, A, X, B);
 
         Solver *M = NULL;
 
