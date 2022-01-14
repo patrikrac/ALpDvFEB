@@ -42,6 +42,9 @@ class Poisson:
     """
     
     def __init__(self, order, max_dof):
+        self.comm = MPI_Init()
+        if self.comm.rank == 0:
+            print("Running with {} processes.".format(self.comm.size))
         
         self.order = order
         self.max_dof = max_dof
@@ -130,14 +133,14 @@ class Poisson:
 
         #Define the Bilinear form corresponding to the given problem
         a = BilinearForm(self.fes)
-        a += grad(u)*grad(v)*dx
+        a += SymbolicBFI(grad(u)*grad(v))
 
         #Define the Linear form corresponding to the given problem
         f = LinearForm(self.fes)
-        f += self.rhs*v*dx
+        f += SymbolicLFI(self.rhs*v)
         
         #Define the solver to be used to solve the problem
-        c = Preconditioner(a, type = "local")
+        c = Preconditioner(a, "hypre")
 
         return (a,f,c)
     
@@ -173,7 +176,7 @@ class Poisson:
 
         self.c.Update()
 
-        self.bvp.Do()
+        gfu.vec.data = solvers.CG(mat=a.mat, pre=c.mat, rhs=f.vec, tol=1e-12, maxsteps=2000)
 
 
     def output_vtk(self, cycle):
