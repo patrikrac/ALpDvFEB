@@ -171,7 +171,7 @@ namespace AspDEQuFEL
         locally_owned_dofs = dof_handler.locally_owned_dofs();
         DoFTools::extract_locally_relevant_dofs(dof_handler, locally_relevant_dofs);
 
-        local_solution.reinit(locally_owned_dofs, mpi_communicator);
+        local_solution.reinit(locally_owned_dofs, locally_relevant_dofs, mpi_communicator);
         system_rhs.reinit(locally_owned_dofs, mpi_communicator);
 
         constraints.clear();
@@ -289,9 +289,13 @@ namespace AspDEQuFEL
     void Poisson<dim>::refine_grid()
     {
         Vector<float> estimated_error_per_cell(triangulation.n_active_cells());
-        pcout << "Estimation started" << std::endl;
-        KellyErrorEstimator<dim>::estimate(dof_handler, QGauss<dim - 1>(fe.degree + 1), {}, local_solution, estimated_error_per_cell);
-        pcout << "Estimation done" << std::endl;
+
+        KellyErrorEstimator<dim>::estimate(dof_handler, 
+                                                                    QGauss<dim - 1>(fe.degree + 1), 
+                                                                    std::map<types::boundary_id, const Function<dim> *>(), 
+                                                                    local_solution, 
+                                                                    estimated_error_per_cell);
+    
         parallel::distributed::GridRefinement::refine_and_coarsen_fixed_number(triangulation, estimated_error_per_cell, 0.15, 0);
 
         triangulation.execute_coarsening_and_refinement();
