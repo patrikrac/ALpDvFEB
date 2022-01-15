@@ -350,4 +350,5 @@ if __name__ == "__main__":
         e = Poisson(int(sys.argv[1]), int(sys.argv[2]), comm)
         e.do()
     else:    
+        help(MPI_Init)
         print("usage: python3.8 ngsolve-general.py <order> <max_dof>")
