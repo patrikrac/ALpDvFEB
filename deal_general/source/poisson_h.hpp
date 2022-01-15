@@ -410,7 +410,7 @@ namespace AspDEQuFEL
             }
             output_custom3.close();
 
-            std::ofstream output_customTimeDOF("error_dealii_time_dof.txt");
+            std::ofstream output_customTimeDOF("time_dof_dealii.txt");
 
             output_customTimeDOF << "Deal.ii" << std::endl;
             output_customTimeDOF << "$n_\\text{dof}$" << std::endl;
@@ -422,7 +422,7 @@ namespace AspDEQuFEL
             }
             output_customTimeDOF.close();
 
-            std::ofstream output_customTimeL2("error_dealii_time_l2.txt");
+            std::ofstream output_customTimeL2("dealii_time_l2_dealii.txt");
 
             output_customTimeL2 << "Deal.ii" << std::endl;
             output_customTimeL2 << "$\\left\\|u_h - I_hu\\right\\|_{L_2}$" << std::endl;
@@ -434,7 +434,7 @@ namespace AspDEQuFEL
             }
             output_customTimeL2.close();
 
-            std::ofstream output_customTimeMax("error_dealii_time_max.txt");
+            std::ofstream output_customTimeMax("time_max_dealii.txt");
 
             output_customTimeMax << "Deal.ii" << std::endl;
             output_customTimeMax << "$\\left\\|u_h - I_hu\\right\\|_{L_\\infty}$" << std::endl;
@@ -446,7 +446,7 @@ namespace AspDEQuFEL
             }
             output_customTimeMax.close();
 
-            std::ofstream output_customTimeRef("error_dealii_refinement_time.txt");
+            std::ofstream output_customTimeRef("refinement_time_dealii.txt");
 
             output_customTimeRef << "Deal.ii" << std::endl;
             output_customTimeRef << "$n_\\text{dof}$" << std::endl;
@@ -454,9 +454,9 @@ namespace AspDEQuFEL
             output_customTimeRef << convergence_vector.size() << std::endl;
             for (size_t i = 0; i < convergence_vector.size(); i++)
             {
-                output_customTimeMax << convergence_vector[i].n_dofs << " " << convergence_vector[i].refinement_time << std::endl;
+                output_customTimeRef << convergence_vector[i].n_dofs << " " << convergence_vector[i].refinement_time << std::endl;
             }
-            output_customTimeMax.close();
+            output_customTimeRef.close();
         }
     }
 
