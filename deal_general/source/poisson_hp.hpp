@@ -358,7 +358,8 @@ namespace AspDEQuFEL
         Vector<float> fe_degrees(triangulation.n_active_cells());
         for (const auto &cell : dof_handler.active_cell_iterators())
         {
-            fe_degrees(cell->active_cell_index()) = fe_collection[cell->active_fe_index()].degree;
+            if (cell->is_locally_owned())
+                fe_degrees(cell->active_cell_index()) = fe_collection[cell->active_fe_index()].degree;
         }
 
         data_out.attach_dof_handler(dof_handler);
@@ -481,7 +482,6 @@ namespace AspDEQuFEL
         const double L2_error = VectorTools::compute_global_error(triangulation,
                                                                   difference_per_cell,
                                                                   VectorTools::L2_norm);
-
 
         VectorTools::integrate_difference(dof_handler,
                                           local_solution,
