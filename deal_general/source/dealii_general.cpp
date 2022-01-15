@@ -13,14 +13,20 @@ int main(int argc, char *argv[])
 {
     if (argc < 3 || argc > 4)
     {
-        std::cout << "Usage: ./dealii_general order max_dofs" << std::endl;
+        std::cout << "Usage: ./dealii_general order max_dofs -hp" << std::endl;
         return -1;
     }
     try
     {
         Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
-
-        AspDEQuFEL::Poisson<3> l(std::atoi(argv[1]), std::atoi(argv[2]));
+        if(argc == 3)
+        {
+            AspDEQuFEL::Poisson<3> l(std::atoi(argv[1]), std::atoi(argv[2]));
+        } else 
+        {
+            AspDEQuFEL::PoissonHP<3> l(std::atoi(argv[2]));
+        }
+        
         l.run();
     }
     catch (std::exception &exc)
