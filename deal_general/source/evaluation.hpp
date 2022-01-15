@@ -13,7 +13,7 @@ template <int dim>
 class PointValueEvaluation
 {
 public:
-    PointValueEvaluation(const Point<dim> &evaluation_point)  : evaluation_point(evaluation_point) {}
+    PointValueEvaluation(const Point<dim> &evaluation_point) : evaluation_point(evaluation_point) {}
     double operator()(const DoFHandler<dim> &dof_handler, const Vector<double> &solution) const;
 
 private:
@@ -32,7 +32,6 @@ typedef struct metrics
     int n_dofs;
 } metrics;
 
-
 template <int dim>
 double PointValueEvaluation<dim>::operator()(const DoFHandler<dim> &dof_handler, const Vector<double> &solution) const
 {
@@ -41,13 +40,16 @@ double PointValueEvaluation<dim>::operator()(const DoFHandler<dim> &dof_handler,
     bool eval_point_found = false;
     for (const auto &cell : dof_handler.active_cell_iterators())
         if (!eval_point_found)
-            for (const auto vertex : cell->vertex_indices())
-                if (cell->vertex(vertex) == evaluation_point)
-                {
-                    point_value = solution(cell->vertex_dof_index(vertex, 0));
-                    eval_point_found = true;
-                    break;
-                }
+            if (cell->is_locally_owned())
+            {
+                for (const auto vertex : cell->vertex_indices())
+                    if (cell->vertex(vertex) == evaluation_point)
+                    {
+                        point_value = solution(cell->vertex_dof_index(vertex, 0));
+                        eval_point_found = true;
+                        break;
+                    }
+            }
 
     return point_value;
 }
