@@ -11,7 +11,6 @@ The program runns with the command "netgen ngsolve-general.py" or "python3.8 ngs
 import sys
 import os
 from typing import NamedTuple
-from mpi4py import MPI
 from ngsolve import *
 from netgen.csg import *
 from netgen.geom2d import CSG2d, Rectangle
@@ -344,7 +343,7 @@ if __name__ == "__main__":
         if not os.path.exists(result_directory):
             os.makedirs(result_directory)
             
-        comm = MPI.COMM_WORLD
+        comm = MPI_Init()
         if comm.rank == 0:
             print("Running with {} MPI processes.".format(comm.size))
             
