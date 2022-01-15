@@ -19,9 +19,7 @@ namespace AspDEQuFEL
    using namespace mfem;
    using namespace std;
    //----------------------------------------------------------------
-   //Class for the specification of the problem
-   //Initialized with the hysteresis (Factor for derefinement), the max element error used for Refinement, the order of elements to be used,
-   //and the three postprocessors required to calculate the pointwise error.
+   //Class for the Poisson AMR solver
    //----------------------------------------------------------------
    class Poisson
    {
