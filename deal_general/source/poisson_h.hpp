@@ -441,19 +441,20 @@ namespace AspDEQuFEL
         const unsigned int n_active_cells = triangulation.n_active_cells();
         const unsigned int n_dofs = dof_handler.n_dofs();
 
-        //double error_p1 = abs(postprocessor1(dof_handler, solution) - Solution<dim>().value(Point<dim>(0.125, 0.125, 0.125)));
-        //double error_p2 = abs(postprocessor2(dof_handler, solution) - Solution<dim>().value(Point<dim>(0.25, 0.25, 0.25)));
-        //double error_p3 = abs(postprocessor3(dof_handler, solution) - Solution<dim>().value(Point<dim>(0.5, 0.5, 0.5)));
-        double error_p1 = 0.0;
-        double error_p2 = 0.0;
-        double error_p3 = 0.0;
+        double local_error_p1 = abs(postprocessor1(dof_handler, solution) - Solution<dim>().value(Point<dim>(0.125, 0.125, 0.125)));
+        double local_error_p2 = abs(postprocessor2(dof_handler, solution) - Solution<dim>().value(Point<dim>(0.25, 0.25, 0.25)));
+        double local_error_p3 = abs(postprocessor3(dof_handler, solution) - Solution<dim>().value(Point<dim>(0.5, 0.5, 0.5)));
+        double error_p1 = Utilities::MPI::min(local_error_p1, mpi_communicator);
+        double error_p2 =  Utilities::MPI::min(local_error_p2, mpi_communicator);
+        double error_p3 =  Utilities::MPI::min(local_error_p3, mpi_communicator);
 
         pcout << "Cycle " << cycle << ':' << std::endl
               << "   Number of active cells:       " << n_active_cells
               << std::endl
               << "   Number of degrees of freedom: " << n_dofs << std::endl
               << "L2 error: " << L2_error << std::endl
-              << "Max error: " << Linfty_error << std::endl;
+              << "Max error: " << Linfty_error << std::endl
+              << "Test err p 1 =" << error_p1 << std::endl;
 
         convergence_table.add_value("cycle", cycle);
         convergence_table.add_value("cells", n_active_cells);
