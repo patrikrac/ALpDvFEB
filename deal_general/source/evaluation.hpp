@@ -14,7 +14,7 @@ class PointValueEvaluation
 {
 public:
     PointValueEvaluation(const Point<dim> &evaluation_point) : evaluation_point(evaluation_point) {}
-    double operator()(const DoFHandler<dim> &dof_handler, const Vector<double> &solution) const;
+    double operator()(const DoFHandler<dim> &dof_handler, const LinearAlgebraPETSc::MPI::Vector &solution) const;
 
 private:
     const Point<dim> evaluation_point;
