@@ -135,7 +135,7 @@ class Poisson:
         f += self.rhs*v*dx
         
         #Define the solver to be used to solve the problem
-        c = Preconditioner(a, "hypre")
+        c =Preconditioner(a, type="bddc", usehypre = True)
 
         return (a,f,c)
     
@@ -231,7 +231,8 @@ class Poisson:
               #                         error_p1, error_p2, error_p3))
         
         #print("Max error: {}".format(max_error))
-        print("L2 error: {}".format(l2_error))
+        if self.comm.rank == 0:
+            print("L2 error: {}".format(l2_error))
 
 
     def output_Table(self):
