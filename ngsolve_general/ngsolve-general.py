@@ -42,10 +42,11 @@ class Poisson:
     The problem parameters are defined in the __init__ method.
     """
     
-    def __init__(self, order, max_dof):
-
+    def __init__(self, order, max_dof, comm):
+        
         self.order = order
         self.max_dof = max_dof
+        self.comm = comm
         
         self.timer = Timer()
         
@@ -72,7 +73,7 @@ class Poisson:
         #=============================================
         
         #Generate the mesh
-        self.mesh = self.make_mesh()
+        self.make_mesh()
 
         #Table list used for storing the error in each iteration
         self.table_list = []
@@ -91,15 +92,17 @@ class Poisson:
         Initialize the problem mesh.
         Dimensionality has to be taken into account.
         """
+        if comm.rank == 0:
+            brick = OrthoBrick(Pnt(0.0,0.0,0.0), Pnt(1.0,1.0,1.0)).bc('bnd')
+            #rect = Rectangle( pmin=(0,0), pmax=(1.0,1.0), bc="bnd" )
 
-        brick = OrthoBrick(Pnt(0.0,0.0,0.0), Pnt(1.0,1.0,1.0)).bc('bnd')
-        #rect = Rectangle( pmin=(0,0), pmax=(1.0,1.0), bc="bnd" )
+            geo = CSGeometry()
+            #geo = CSG2d()
+            geo.Add (brick)
 
-        geo = CSGeometry()
-        #geo = CSG2d()
-        geo.Add (brick)
-
-        return Mesh(geo.GenerateMesh(maxh=0.125))
+            self.mesh =  Mesh(geo.GenerateMesh(maxh=0.125)).Distribute(self.comm)
+        else:
+            self.mesh = netgen.meshing.Mesh.Recieve(self.comm)
         
 
     def setup_space(self):
@@ -131,11 +134,11 @@ class Poisson:
 
         #Define the Bilinear form corresponding to the given problem
         a = BilinearForm(self.fes)
-        a += SymbolicBFI(grad(u)*grad(v))
+        a += grad(u)*grad(v)*dx
 
         #Define the Linear form corresponding to the given problem
         f = LinearForm(self.fes)
-        f += SymbolicLFI(self.rhs*v)
+        f += self.rhs*v*dx
         
         #Define the solver to be used to solve the problem
         c = Preconditioner(a, "hypre")
@@ -174,7 +177,7 @@ class Poisson:
 
         self.c.Update()
 
-        gfu.vec.data = solvers.CG(mat=a.mat, pre=c.mat, rhs=f.vec, tol=1e-12, maxsteps=2000)
+        self.gfu.vec.data = CGSolver(mat=self.a.mat, pre=self.c.mat, rhs=self.f.vec, tol=1e-12, maxsteps=2000)
 
 
     def output_vtk(self, cycle):
@@ -342,8 +345,9 @@ if __name__ == "__main__":
             
         comm = MPI.COMM_WORLD
         if comm.rank == 0:
-            print("Running with {} processes.".format(comm.size))
-        #e = Poisson(int(sys.argv[1]), int(sys.argv[2]))
-        #e.do()
+            print("Running with {} MPI processes.".format(comm.size))
+            
+        e = Poisson(int(sys.argv[1]), int(sys.argv[2]), comm)
+        e.do()
     else:    
         print("usage: python3.8 ngsolve-general.py <order> <max_dof>")
