@@ -11,6 +11,7 @@ The program runns with the command "netgen ngsolve-general.py" or "python3.8 ngs
 import sys
 import os
 from typing import NamedTuple
+from mpi4py import *
 from ngsolve import *
 from netgen.csg import *
 from netgen.geom2d import CSG2d, Rectangle
@@ -42,10 +43,7 @@ class Poisson:
     """
     
     def __init__(self, order, max_dof):
-        self.comm = MPI_Init()
-        if self.comm.rank == 0:
-            print("Running with {} processes.".format(self.comm.size))
-        
+
         self.order = order
         self.max_dof = max_dof
         
@@ -341,7 +339,11 @@ if __name__ == "__main__":
         result_directory = os.path.join(current_directory, r'output')
         if not os.path.exists(result_directory):
             os.makedirs(result_directory)
-        e = Poisson(int(sys.argv[1]), int(sys.argv[2]))
-        e.do()
+            
+        comm = MPI_Init()
+        if comm.rank == 0:
+            print("Running with {} processes.".format(comm.size))
+        #e = Poisson(int(sys.argv[1]), int(sys.argv[2]))
+        #e.do()
     else:    
         print("usage: python3.8 ngsolve-general.py <order> <max_dof>")
