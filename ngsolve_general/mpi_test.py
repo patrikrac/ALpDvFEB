@@ -7,7 +7,7 @@ from ngsolve import *
 
 # initialize MPI
 comm = MPI.COMM_WORLD
-MPI_Init()
+comm = MPI_Init()
 rank = comm.rank
 np = comm.size
 
