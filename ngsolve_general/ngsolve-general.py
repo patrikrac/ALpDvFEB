@@ -11,7 +11,7 @@ The program runns with the command "netgen ngsolve-general.py" or "python3.8 ngs
 import sys
 import os
 from typing import NamedTuple
-from mpi4py import *
+from mpi4py import MPI
 from ngsolve import *
 from netgen.csg import *
 from netgen.geom2d import CSG2d, Rectangle
