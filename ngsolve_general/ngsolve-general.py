@@ -11,10 +11,10 @@ The program runns with the command "netgen ngsolve-general.py" or "python3.8 ngs
 import sys
 import os
 from typing import NamedTuple
-from mpi4py import MPI
+from netgen.csg import unit_cube
+import netgen.meshing
+
 from ngsolve import *
-from netgen.csg import *
-from netgen.geom2d import CSG2d, Rectangle
 
 from Timer import Timer
 
@@ -93,17 +93,10 @@ class Poisson:
         Dimensionality has to be taken into account.
         """
         if comm.rank == 0:
-            brick = OrthoBrick(Pnt(0.0,0.0,0.0), Pnt(1.0,1.0,1.0)).bc('bnd')
-            #rect = Rectangle( pmin=(0,0), pmax=(1.0,1.0), bc="bnd" )
-
-            geo = CSGeometry()
-            #geo = CSG2d()
-            geo.Add (brick)
-
-            ngmesh =  geo.GenerateMesh(maxh=0.125).Distribute(self.comm)
+            ngmesh = unit_cube.GenerateMesh(maxh=0.25).Distribute(comm)
         else:
-            ngmesh = netgen.meshing.Mesh.Receive(self.comm)
-        
+            ngmesh = netgen.meshing.Mesh.Receive(comm)
+
         self.mesh = Mesh(ngmesh)
 
     def setup_space(self):
@@ -178,7 +171,7 @@ class Poisson:
 
         self.c.Update()
 
-        self.gfu.vec.data = CGSolver(mat=self.a.mat, pre=self.c.mat, rhs=self.f.vec, tol=1e-12, maxsteps=2000)
+        self.gfu.vec.data = solver.CG(mat=self.a.mat, pre=self.c.mat, rhs=self.f.vec, tol=1e-12, maxsteps=2000)
 
 
     def output_vtk(self, cycle):
@@ -344,7 +337,7 @@ if __name__ == "__main__":
         if not os.path.exists(result_directory):
             os.makedirs(result_directory)
             
-        comm = MPI.COMM_WORLD
+        comm = mpi_world
         if comm.rank == 0:
             print("Running with {} MPI processes.".format(comm.size))
             
