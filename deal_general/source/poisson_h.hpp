@@ -101,9 +101,9 @@ namespace AspDEQuFEL
         LinearAlgebraPETSc::MPI::Vector system_rhs;
 
         ConvergenceTable convergence_table;
-        //PointValueEvaluation<dim> postprocessor1;
-        //PointValueEvaluation<dim> postprocessor2;
-        //PointValueEvaluation<dim> postprocessor3;
+        PointValueEvaluation<dim> postprocessor1;
+        PointValueEvaluation<dim> postprocessor2;
+        PointValueEvaluation<dim> postprocessor3;
         std::vector<metrics> convergence_vector;
     };
 
@@ -119,7 +119,10 @@ namespace AspDEQuFEL
                                                     this_mpi_process(Utilities::MPI::this_mpi_process(mpi_communicator)),
                                                     pcout(std::cout, (this_mpi_process == 0)),
                                                     fe(order),
-                                                    dof_handler(triangulation)
+                                                    dof_handler(triangulation),
+                                                    postprocessor1(Point<3>(0.125,0.125,0.125)),
+                                                    postprocessor2(Point<3>(0.25,0.25,0.25)),
+                                                    postprocessor3(Point<3>(0.5,0.5,0.5))
     {
     }
 
