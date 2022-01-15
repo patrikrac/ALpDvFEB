@@ -172,8 +172,11 @@ class Poisson:
         self.f.Assemble()
 
         self.c.Update()
+        
+        res = self.f.vec.CreateVector()
+        res.data = self.f.vec - self.a.mat * self.gfu.vec
 
-        self.gfu.vec.data = CGSolver(self.a.mat,self.c.mat, precision=1e-12, maxsteps=2000)*self.f.vec
+        self.gfu.vec.data += CGSolver(self.a.mat,self.c.mat, precision=1e-12, maxsteps=2000)*res
 
 
     def output_vtk(self, cycle):
