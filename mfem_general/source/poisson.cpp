@@ -124,7 +124,7 @@ namespace AspDEQuFEL
         HypreBoomerAMG *amg = new HypreBoomerAMG(A);
         amg->SetPrintLevel(0);
 
-        HyprePCG pcg(A);
+        HyprePCG pcg(MPI_COMM_WORLD);
         pcg.SetTol(1e-12);
         pcg.SetMaxIter(2000);
         pcg.SetPrintLevel(3);
