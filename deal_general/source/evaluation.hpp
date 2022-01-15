@@ -25,10 +25,13 @@ typedef struct metrics
 {
     double max_error;
     double l2_error;
+    double solution_time;
+    double refinement_time;
     double error_p1;
     double error_p2;
     double error_p3;
     int cycle;
+    int cells;
     int n_dofs;
 } metrics;
 
