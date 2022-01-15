@@ -444,9 +444,9 @@ namespace AspDEQuFEL
         const unsigned int n_active_cells = triangulation.n_active_cells();
         const unsigned int n_dofs = dof_handler.n_dofs();
 
-        double local_error_p1 = abs(postprocessor1(dof_handler, solution) - Solution<dim>().value(Point<dim>(0.125, 0.125, 0.125)));
-        double local_error_p2 = abs(postprocessor2(dof_handler, solution) - Solution<dim>().value(Point<dim>(0.25, 0.25, 0.25)));
-        double local_error_p3 = abs(postprocessor3(dof_handler, solution) - Solution<dim>().value(Point<dim>(0.5, 0.5, 0.5)));
+        double local_error_p1 = abs(postprocessor1(dof_handler, local_solution) - Solution<dim>().value(Point<dim>(0.125, 0.125, 0.125)));
+        double local_error_p2 = abs(postprocessor2(dof_handler, local_solution) - Solution<dim>().value(Point<dim>(0.25, 0.25, 0.25)));
+        double local_error_p3 = abs(postprocessor3(dof_handler, local_solution) - Solution<dim>().value(Point<dim>(0.5, 0.5, 0.5)));
         double error_p1 = Utilities::MPI::min(local_error_p1, mpi_communicator);
         double error_p2 =  Utilities::MPI::min(local_error_p2, mpi_communicator);
         double error_p3 =  Utilities::MPI::min(local_error_p3, mpi_communicator);
