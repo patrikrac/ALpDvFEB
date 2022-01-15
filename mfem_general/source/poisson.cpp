@@ -116,11 +116,11 @@ namespace AspDEQuFEL
         Array<int> ess_tdof_list;
         fespace.GetEssentialTrueDofs(ess_bdr, ess_tdof_list);
 
-        OperatorPtr A;
+        HypreParMatrix A;
         Vector B, X;
 
         a.FormLinearSystem(ess_tdof_list, x, f, A, X, B);
-        /*
+
         HypreBoomerAMG *amg = new HypreBoomerAMG(A);
         amg->SetPrintLevel(0);
 
@@ -130,21 +130,6 @@ namespace AspDEQuFEL
         pcg.SetPrintLevel(3);
         pcg.SetPreconditioner(*amg);
         pcg.Mult(B, X);
-        */
-        Solver *M = NULL;
-
-        HypreBoomerAMG *amg = new HypreBoomerAMG;
-        amg->SetPrintLevel(0);
-        M = amg;
-
-        CGSolver cg(MPI_COMM_WORLD);
-        cg.SetRelTol(1e-12);
-        cg.SetMaxIter(2000);
-        cg.SetPrintLevel(3);
-        cg.SetPreconditioner(*M);
-        cg.SetOperator(*A);
-        cg.Mult(B, X);
-        delete M;
 
         a.RecoverFEMSolution(X, f, x);
     }
@@ -226,13 +211,11 @@ namespace AspDEQuFEL
         while (true)
         {
             HYPRE_BigInt global_dofs = fespace.GlobalTrueVSize();
-
+            assemble(a, f);
             if (myid == 0)
             {
                 cout << "Iteration: " << iter << endl
                      << "DOFs: " << global_dofs << endl;
-
-                assemble(a, f);
 
 #ifdef USE_TIMING
                 startTimer();
