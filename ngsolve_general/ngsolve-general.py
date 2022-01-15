@@ -305,7 +305,7 @@ class Poisson:
         """
         cycle = 0
         while self.fes.ndof < self.max_dof:
-            self.mesh.Refine()
+            #self.mesh.Refine()
 
             self.gfu.Set(self.g, definedon=self.mesh.Boundaries("bnd"))
             
