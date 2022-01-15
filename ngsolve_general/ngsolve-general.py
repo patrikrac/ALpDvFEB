@@ -81,7 +81,7 @@ class Poisson:
         #Setup the FE-Space and the Solution vector with proper boundary conditions, as well as the space and solution for the error estimation
         (self.fes, self.gfu, self.space_flux, self.gf_flux) = self.setup_space()
         
-        print("rank "+str(self.com.rank)+" has "+str(self.fes.ndof)+" of "+str(self.fes.ndofglobal)+" dofs!")
+        print("rank "+str(self.comm.rank)+" has "+str(self.fes.ndof)+" of "+str(self.fes.ndofglobal)+" dofs!")
 
         #Get the Bilinear and Linear form aswell as the solver.
         (self.a, self.f, self.c) = self.setup_system()
