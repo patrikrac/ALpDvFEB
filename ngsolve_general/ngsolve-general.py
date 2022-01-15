@@ -207,31 +207,30 @@ class Poisson:
 
         l2_error = sqrt(Integrate((self.gfu - self.uexact)**2, self.mesh))
         
-        l2_relative_error = sqrt(Integrate((self.gfu - self.uexact)**2,self.mesh)) / sqrt(Integrate(self.uexact**2, self.mesh))
         
-        max_error = self.calculate_max_error()
+        #max_error = self.calculate_max_error()
         #max_error = max(Integrate(self.gfu, self.mesh, VOL, element_wise=True)-Integrate(self.uexact, self.mesh, VOL, element_wise=True))   
 
-        ip1 = self.mesh(0.125, 0.125, 0.125)
-        error_p1 = abs(self.gfu(ip1) - self.uexact(ip1))
+        #ip1 = self.mesh(0.125, 0.125, 0.125)
+        #error_p1 = abs(self.gfu(ip1) - self.uexact(ip1))
         
-        ip2 = self.mesh(0.25, 0.25, 0.25)
-        error_p2 = abs(self.gfu(ip2) - self.uexact(ip2))
+        #ip2 = self.mesh(0.25, 0.25, 0.25)
+        #error_p2 = abs(self.gfu(ip2) - self.uexact(ip2))
         
-        ip3 = self.mesh(0.5, 0.5, 0.5)
-        error_p3 = abs(self.gfu(ip3) - self.uexact(ip3))
+        #ip3 = self.mesh(0.5, 0.5, 0.5)
+        #error_p3 = abs(self.gfu(ip3) - self.uexact(ip3))
         
-        num_cells = len([el for el in self.mesh.Elements()])
+        #num_cells = len([el for el in self.mesh.Elements()])
 
-        self.table_list.append(Metrics(cycle, 
-                                       num_cells, 
-                                       self.fes.ndof, 
-                                       max_error,
-                                       l2_error,
-                                       l2_relative_error,
-                                       error_p1, error_p2, error_p3))
+        #self.table_list.append(Metrics(cycle, 
+         #                              num_cells, 
+          #                             self.fes.ndof, 
+           #                            max_error,
+            #                           l2_error,
+             #                          l2_relative_error,
+              #                         error_p1, error_p2, error_p3))
         
-        print("Max error: {}".format(max_error))
+        #print("Max error: {}".format(max_error))
         print("L2 error: {}".format(l2_error))
 
 
