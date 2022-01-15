@@ -28,7 +28,7 @@ namespace AspDEQuFEL
    public:
       Poisson(int num_procs, int myid, int order, int max_iters) : num_procs(num_procs), myid(myid),
                                                                    max_dofs(max_iters), reorder_mesh(0), nc_simplices(false),
-                                                                   hysteresis(0.2), max_elem_error(1.0e-12), order(order),
+                                                                   max_elem_error(1.0e-12), order(order),
                                                                    postprocessor1({0.125, 0.125, 0.125}), postprocessor2({0.25, 0.25, 0.25}), postprocessor3({0.5, 0.5, 0.5})
       {
       }
@@ -38,8 +38,9 @@ namespace AspDEQuFEL
       void make_mesh();
 
       void update(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace &fespace, ParGridFunction &x, ParGridFunction &error_zero);
-      void solve(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace& fespace, ParGridFunction &x, Array<int> &ess_bdr, FunctionCoefficient &bdr);
-      bool refine(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace& fespace, ParGridFunction &x, ParGridFunction &error_zero, ThresholdRefiner &refiner);
+      void assemble(ParBilinearForm &a, ParLinearForm &f);
+      void solve(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace &fespace, ParGridFunction &x, Array<int> &ess_bdr, FunctionCoefficient &bdr);
+      bool refine(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace &fespace, ParGridFunction &x, ParGridFunction &error_zero, ThresholdRefiner &refiner);
 
       void exact_error(int cycle, int dofs, double time, ParGridFunction &x, ParGridFunction &error_zero, FunctionCoefficient &u);
 
@@ -49,7 +50,6 @@ namespace AspDEQuFEL
       //Configuration parameters
 
       //Derefinement safety coefficient
-      double hysteresis;
       double max_elem_error;
       int order;
       PointValueEvaluation postprocessor1, postprocessor2, postprocessor3;

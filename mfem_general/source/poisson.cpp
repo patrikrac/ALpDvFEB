@@ -101,14 +101,17 @@ namespace AspDEQuFEL
         f.Update();
     }
 
+    void Poisson::assemble(ParBilinearForm &a, ParLinearForm &f)
+    {
+        f.Assemble();
+        a.Assemble();
+    }
+
     //----------------------------------------------------------------
     //Solve the Problem on the current mesh
     //----------------------------------------------------------------
     void Poisson::solve(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace &fespace, ParGridFunction &x, Array<int> &ess_bdr, FunctionCoefficient &bdr)
     {
-        f.Assemble();
-        a.Assemble();
-
         x.ProjectBdrCoefficient(bdr, ess_bdr);
         Array<int> ess_tdof_list;
         fespace.GetEssentialTrueDofs(ess_bdr, ess_tdof_list);
@@ -142,9 +145,6 @@ namespace AspDEQuFEL
         {
             return false;
         }
-
-        // 20. Update the space and interpolate the solution.
-        update(a, f, fespace, x, error_zero);
 
         return true;
     }
@@ -219,6 +219,10 @@ namespace AspDEQuFEL
             {
                 cout << "Iteration: " << iter << endl
                      << "DOFs: " << global_dofs << endl;
+
+                update(a, f, fespace, x, error_zero);
+                assemble(a,f);
+                
 #ifdef USE_TIMING
                 startTimer();
 #endif
