@@ -251,7 +251,7 @@ namespace AspDEQuFEL
 #endif
         delete pmesh;
 
-        //output_table();
+        output_table();
     }
 
     //----------------------------------------------------------------
