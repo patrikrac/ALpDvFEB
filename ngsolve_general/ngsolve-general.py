@@ -171,7 +171,7 @@ class Poisson:
 
         self.c.Update()
 
-        self.gfu.vec.data = solver.CG(mat=self.a.mat, pre=self.c.mat, rhs=self.f.vec, tol=1e-12, maxsteps=2000)
+        self.gfu.vec.data = CGSolver(self.a.mat,self.c.mat, tol=1e-12, maxsteps=2000)*self.f.vec
 
 
     def output_vtk(self, cycle):
@@ -303,30 +303,31 @@ class Poisson:
         """
         cycle = 0
         while self.fes.ndof < self.max_dof:
-            self.mesh.Refine()
+            #self.mesh.Refine()
 
             self.gfu.Set(self.g, definedon=self.mesh.Boundaries("bnd"))
             
-            if __timing__:
-                self.timer.startTimer()
+            #if __timing__:
+                #self.timer.startTimer()
 
             self.solve()
             
-            if __timing__:
-                self.timer.printTimer()
+            #if __timing__:
+                #self.timer.printTimer()
 
-            if __output__:
-                self.exact_error(cycle)
-                self.output_vtk(cycle)
+           # if __output__:
+            self.exact_error(cycle)
+                #self.output_vtk(cycle)
+            break
+            #self.estimate_error()
 
-            self.estimate_error()
-
-            print("Cycle: {}, DOFs: {}".format(cycle, self.fes.ndof))
-            cycle += 1
+            #print("Cycle: {}, DOFs: {}".format(cycle, self.fes.ndof))
+            #cycle += 1
         
-        if __output__:
-            self.output_vtk(cycle)
-            self.output_Table()
+        #if __output__:
+            #self.output_vtk(cycle)
+            #self.output_Table()
+            
         
 
 
