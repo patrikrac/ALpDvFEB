@@ -24,7 +24,8 @@ typedef struct error_values
    int cycle;
    int cells;
    int dofs;
-   double time;
+   double solution_time;
+   double refinement_time;
    double max_error;
    double l2_error;
    double error_p1;

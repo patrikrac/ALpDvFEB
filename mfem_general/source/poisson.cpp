@@ -77,14 +77,11 @@ namespace AspDEQuFEL
     //----------------------------------------------------------------
     //Update all variables to adabt to the recently adapted mesh
     //----------------------------------------------------------------
-    void Poisson::update(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace &fespace, ParGridFunction &x, ParGridFunction &error_zero)
+    void Poisson::update(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace &fespace, ParGridFunction &x)
     {
         fespace.Update();
 
         x.Update();
-
-        error_zero.Update();
-        error_zero = 0.0;
 
         if (pmesh->Nonconforming())
         {
@@ -137,7 +134,7 @@ namespace AspDEQuFEL
     //----------------------------------------------------------------
     //Execute one refinement step and call the update funciton to adapt the other variables
     //----------------------------------------------------------------
-    bool Poisson::refine(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace &fespace, ParGridFunction &x, ParGridFunction &error_zero, ThresholdRefiner &refiner)
+    bool Poisson::refine(ThresholdRefiner &refiner)
     {
         refiner.Apply(*pmesh);
 
@@ -173,10 +170,6 @@ namespace AspDEQuFEL
         ParLinearForm f(&fespace);
 
         ParGridFunction x(&fespace);
-
-        //Grid function for calculation of the relative norm
-        ParGridFunction error_zero(&fespace);
-        error_zero = 0.0;
 
         FunctionCoefficient u(bdr_func);
 
@@ -232,7 +225,7 @@ namespace AspDEQuFEL
             }
 #endif
 
-            exact_error(iter, global_dofs, solve_timing, x, error_zero, u);
+            exact_error(iter, global_dofs, solve_timing, refine_timing, x, u);
 
 #ifdef USE_TIMING
             if (myid == 0)
@@ -241,7 +234,7 @@ namespace AspDEQuFEL
             }
 #endif
             //Stop the loop if no more elements are marked for refinement or the desired number of DOFs is reached.
-            if (global_dofs >= max_dofs || !refine(a, f, fespace, x, error_zero, refiner))
+            if (global_dofs >= max_dofs || !refine(refiner))
             {
                 if (myid == 0)
                 {
@@ -255,7 +248,8 @@ namespace AspDEQuFEL
                 refine_timing = printTimer();
             }
 #endif
-            update(a, f, fespace, x, error_zero);
+
+            update(a, f, fespace, x);
             iter++;
         }
 #ifdef USE_TIMING
@@ -275,13 +269,14 @@ namespace AspDEQuFEL
     //----------------------------------------------------------------
     //Calculate the exact error
     //----------------------------------------------------------------
-    void Poisson::exact_error(int cycle, int dofs, double time, ParGridFunction &x, ParGridFunction &error_zero, FunctionCoefficient &u)
+    void Poisson::exact_error(int cycle, int dofs, double solution_time, double refinement_time, ParGridFunction &x, FunctionCoefficient &u)
     {
 
         error_values values = {};
         values.cycle = cycle;
         values.dofs = dofs;
-        values.time = time;
+        values.solution_time = solution_time;
+        values.refinement_time = refinement_time;
         values.cells = pmesh->GetNE();
         values.max_error = x.ComputeMaxError(u);
         values.l2_error = x.ComputeL2Error(u);
@@ -321,6 +316,9 @@ namespace AspDEQuFEL
             std::ofstream output_time_dof("time_dof.txt");
             std::ofstream output_time_l2("time_l2.txt");
             std::ofstream output_time_max("time_max.txt");
+
+            std::ofstream output_refinement_time_dof("time_ref_dof.txt");
+
             std::ofstream output_p1("error_p1.txt");
             std::ofstream output_p2("error_p2.txt");
             std::ofstream output_p3("error_p3.txt");
@@ -339,6 +337,11 @@ namespace AspDEQuFEL
             output_time_dof << "$n_\\text{dof}$" << endl;
             output_time_dof << "Time [s]" << endl;
             output_time_dof << table_vector.size() << endl;
+
+            output_refinement_time_dof << "MFEM" << endl;
+            output_refinement_time_dof << "$n_\\text{dof}$" << endl;
+            output_refinement_time_dof << "Time [s]" << endl;
+            output_refinement_time_dof << table_vector.size() << endl;
 
             output_time_l2 << "MFEM" << endl;
             output_time_l2 << "$\\left\\|u_h - I_hu\\right\\| _{L_2}$" << endl;
@@ -369,15 +372,18 @@ namespace AspDEQuFEL
             output << "\t\\begin{center}" << endl;
             output << "\t\t\\begin{tabular}{|c|c|c|c|c|} \\hline" << endl;
 
-            output << "\t\t\tcycle & \\# cells & \\# dofs & $\\left\\|u_h - I_hu\\right\\| _{L_2}$ & $\\left\\|u_h - I_hu\\right\\| _{L_\\infty}$\\\\ \\hline" << endl;
+            output << "\t\t\tcycle & $n_{cells} $ & $n_{dof}$ & $\\left\\|u_h - I_hu\\right\\| _{L_2}$ & $\\left\\|u_h - I_hu\\right\\| _{L_\\infty}$ & $t_{solve}$ & $t_{refine}$\\\\ \\hline" << endl;
             for (int i = 0; i < table_vector.size(); i++)
             {
-                output << "\t\t\t" << table_vector[i].cycle << " & " << table_vector[i].cells << " & " << table_vector[i].dofs << " & " << setprecision(3) << scientific << table_vector[i].l2_error << " & " << setprecision(3) << scientific << table_vector[i].max_error << "\\\\ \\hline" << endl;
+                output << "\t\t\t" << table_vector[i].cycle << " & " << table_vector[i].cells << " & " << table_vector[i].dofs << " & " << setprecision(3) << scientific << table_vector[i].l2_error << " & " << setprecision(3) << scientific << table_vector[i].max_error << " & "
+                       << setprecision(3) << scientific << table_vector[i].solution_time << " & "
+                       << setprecision(3) << scientific << table_vector[i].refinement_time << "\\\\ \\hline" << endl;
                 output_max << table_vector[i].dofs << " " << table_vector[i].max_error << endl;
                 output_l2 << table_vector[i].dofs << " " << table_vector[i].l2_error << endl;
-                output_time_dof << table_vector[i].time << " " << table_vector[i].dofs << endl;
-                output_time_l2 << table_vector[i].time << " " << table_vector[i].l2_error << endl;
-                output_time_max << table_vector[i].time << " " << table_vector[i].max_error << endl;
+                output_time_dof << table_vector[i].solution_time << " " << table_vector[i].dofs << endl;
+                output_refinement_time_dof << table_vector[i].refinement_time << " " << table_vector[i].dofs << endl;
+                output_time_l2 << table_vector[i].solution_time << " " << table_vector[i].l2_error << endl;
+                output_time_max << table_vector[i].solution_time << " " << table_vector[i].max_error << endl;
                 output_p1 << table_vector[i].dofs << " " << table_vector[i].error_p1 << endl;
                 output_p2 << table_vector[i].dofs << " " << table_vector[i].error_p2 << endl;
                 output_p3 << table_vector[i].dofs << " " << table_vector[i].error_p3 << endl;

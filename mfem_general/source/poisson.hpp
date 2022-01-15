@@ -35,12 +35,12 @@ namespace AspDEQuFEL
    private:
       void make_mesh();
 
-      void update(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace &fespace, ParGridFunction &x, ParGridFunction &error_zero);
+      void update(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace &fespace, ParGridFunction &x);
       void assemble(ParBilinearForm &a, ParLinearForm &f);
       void solve(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace &fespace, ParGridFunction &x, Array<int> &ess_bdr, FunctionCoefficient &bdr);
-      bool refine(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace &fespace, ParGridFunction &x, ParGridFunction &error_zero, ThresholdRefiner &refiner);
+      bool refine(ThresholdRefiner &refiner);
 
-      void exact_error(int cycle, int dofs, double time, ParGridFunction &x, ParGridFunction &error_zero, FunctionCoefficient &u);
+      void exact_error(int cycle, int dofs, double solution_time, double refinement_time,  ParGridFunction &x, FunctionCoefficient &u);
 
       void output_table();
       void vtk_output(ParGridFunction &x);
