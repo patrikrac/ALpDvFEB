@@ -15,7 +15,7 @@ do_vtk = False
 
 print("Hello from rank "+str(rank)+" of "+str(np))
 
-mesh = Mesh(unit_cube.GenerateMesh(maxh=0.1))
+mesh = Mesh(unit_cube.GenerateMesh(maxh=0.5))
 
 
     
