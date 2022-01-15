@@ -80,6 +80,8 @@ class Poisson:
         
         #Setup the FE-Space and the Solution vector with proper boundary conditions, as well as the space and solution for the error estimation
         (self.fes, self.gfu, self.space_flux, self.gf_flux) = self.setup_space()
+        
+        print("rank "+str(self.com.rank)+" has "+str(self.fes.ndof)+" of "+str(self.fes.ndofglobal)+" dofs!")
 
         #Get the Bilinear and Linear form aswell as the solver.
         (self.a, self.f, self.c) = self.setup_system()
@@ -128,14 +130,14 @@ class Poisson:
 
         #Define the Bilinear form corresponding to the given problem
         a = BilinearForm(self.fes)
-        a += grad(u)*grad(v)*dx
-
+        a += SymbolicBFI(grad(u)*grad(v))
+        
         #Define the Linear form corresponding to the given problem
         f = LinearForm(self.fes)
-        f += self.rhs*v*dx
+        f += SymbolicLFI(self.rhs*v)
         
         #Define the solver to be used to solve the problem
-        c =Preconditioner(a, type="bddc", usehypre = True)
+        c =Preconditioner(a, type="hypre")
 
         return (a,f,c)
     
@@ -303,7 +305,7 @@ class Poisson:
         """
         cycle = 0
         while self.fes.ndof < self.max_dof:
-            #self.mesh.Refine()
+            self.mesh.Refine()
 
             self.gfu.Set(self.g, definedon=self.mesh.Boundaries("bnd"))
             
