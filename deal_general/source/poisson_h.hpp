@@ -414,7 +414,7 @@ namespace AspDEQuFEL
 
             output_customTimeDOF << "Deal.ii" << std::endl;
             output_customTimeDOF << "$n_\\text{dof}$" << std::endl;
-            output_customTimeDOF << "Time [s]" << std::endl;
+            output_customTimeDOF << "$Time [s]$" << std::endl;
             output_customTimeDOF << convergence_vector.size() << std::endl;
             for (size_t i = 0; i < convergence_vector.size(); i++)
             {
@@ -422,11 +422,11 @@ namespace AspDEQuFEL
             }
             output_customTimeDOF.close();
 
-            std::ofstream output_customTimeL2("dealii_time_l2_dealii.txt");
+            std::ofstream output_customTimeL2("time_l2_dealii.txt");
 
             output_customTimeL2 << "Deal.ii" << std::endl;
             output_customTimeL2 << "$\\left\\|u_h - I_hu\\right\\|_{L_2}$" << std::endl;
-            output_customTimeL2 << "Time [s]" << std::endl;
+            output_customTimeL2 << "$Time [s]$" << std::endl;
             output_customTimeL2 << convergence_vector.size() << std::endl;
             for (size_t i = 0; i < convergence_vector.size(); i++)
             {
@@ -438,7 +438,7 @@ namespace AspDEQuFEL
 
             output_customTimeMax << "Deal.ii" << std::endl;
             output_customTimeMax << "$\\left\\|u_h - I_hu\\right\\|_{L_\\infty}$" << std::endl;
-            output_customTimeMax << "Time [s]" << std::endl;
+            output_customTimeMax << "$Time [s]$" << std::endl;
             output_customTimeMax << convergence_vector.size() << std::endl;
             for (size_t i = 0; i < convergence_vector.size(); i++)
             {
@@ -450,7 +450,7 @@ namespace AspDEQuFEL
 
             output_customTimeRef << "Deal.ii" << std::endl;
             output_customTimeRef << "$n_\\text{dof}$" << std::endl;
-            output_customTimeRef << "Time [s]" << std::endl;
+            output_customTimeRef << "$Time [s]$" << std::endl;
             output_customTimeRef << convergence_vector.size() << std::endl;
             for (size_t i = 0; i < convergence_vector.size(); i++)
             {
@@ -514,6 +514,7 @@ namespace AspDEQuFEL
 
         metrics values = {};
         values.max_error = Linfty_error;
+        values.l2_error = L2_error;
         values.error_p1 = error_p1;
         values.error_p2 = error_p2;
         values.error_p3 = error_p3;

@@ -408,7 +408,7 @@ namespace AspDEQuFEL
             std::ofstream error_table_file("error.tex");
             convergence_table.write_tex(error_table_file);
 
-            std::ofstream output_customMax("error_max_dealii.txt");
+            std::ofstream output_customMax("error_max_dealii_hp.txt");
 
             output_customMax << "Deal.ii" << std::endl;
             output_customMax << "$n_\\text{dof}$" << std::endl;
@@ -420,7 +420,7 @@ namespace AspDEQuFEL
             }
             output_customMax.close();
 
-            std::ofstream output_customL2("error_l2_dealii.txt");
+            std::ofstream output_customL2("error_l2_dealii_hp.txt");
 
             output_customL2 << "Deal.ii" << std::endl;
             output_customL2 << "$n_\\text{dof}$" << std::endl;
@@ -432,7 +432,7 @@ namespace AspDEQuFEL
             }
             output_customL2.close();
 
-            std::ofstream output_custom1("error_dealii_p1.txt");
+            std::ofstream output_custom1("error_dealii_p1_hp.txt");
 
             output_custom1 << "$x_1$" << std::endl;
             output_custom1 << "$n_\\text{dof}$" << std::endl;
@@ -444,7 +444,7 @@ namespace AspDEQuFEL
             }
             output_custom1.close();
 
-            std::ofstream output_custom2("error_dealii_p2.txt");
+            std::ofstream output_custom2("error_dealii_p2_hp.txt");
 
             output_custom2 << "$x_2$" << std::endl;
             output_custom2 << "$n_\\text{dof}$" << std::endl;
@@ -456,7 +456,7 @@ namespace AspDEQuFEL
             }
             output_custom2.close();
 
-            std::ofstream output_custom3("error_dealii_p3.txt");
+            std::ofstream output_custom3("error_dealii_p3_hp.txt");
 
             output_custom3 << "$x_3$" << std::endl;
             output_custom3 << "$n_\\text{dof}$" << std::endl;
@@ -472,7 +472,7 @@ namespace AspDEQuFEL
 
             output_customTimeDOF << "Deal.ii" << std::endl;
             output_customTimeDOF << "$n_\\text{dof}$" << std::endl;
-            output_customTimeDOF << "Time [s]" << std::endl;
+            output_customTimeDOF << "$Time [s]$" << std::endl;
             output_customTimeDOF << convergence_vector.size() << std::endl;
             for (size_t i = 0; i < convergence_vector.size(); i++)
             {
@@ -480,11 +480,11 @@ namespace AspDEQuFEL
             }
             output_customTimeDOF.close();
 
-            std::ofstream output_customTimeL2("dealii_time_l2_dealii.txt");
+            std::ofstream output_customTimeL2("time_l2_dealii_hp.txt");
 
             output_customTimeL2 << "Deal.ii" << std::endl;
             output_customTimeL2 << "$\\left\\|u_h - I_hu\\right\\|_{L_2}$" << std::endl;
-            output_customTimeL2 << "Time [s]" << std::endl;
+            output_customTimeL2 << "$Time [s]$" << std::endl;
             output_customTimeL2 << convergence_vector.size() << std::endl;
             for (size_t i = 0; i < convergence_vector.size(); i++)
             {
@@ -492,11 +492,11 @@ namespace AspDEQuFEL
             }
             output_customTimeL2.close();
 
-            std::ofstream output_customTimeMax("time_max_dealii.txt");
+            std::ofstream output_customTimeMax("time_max_dealii_hp.txt");
 
             output_customTimeMax << "Deal.ii" << std::endl;
             output_customTimeMax << "$\\left\\|u_h - I_hu\\right\\|_{L_\\infty}$" << std::endl;
-            output_customTimeMax << "Time [s]" << std::endl;
+            output_customTimeMax << "$Time [s]$" << std::endl;
             output_customTimeMax << convergence_vector.size() << std::endl;
             for (size_t i = 0; i < convergence_vector.size(); i++)
             {
@@ -504,11 +504,11 @@ namespace AspDEQuFEL
             }
             output_customTimeMax.close();
 
-            std::ofstream output_customTimeRef("refinement_time_dealii.txt");
+            std::ofstream output_customTimeRef("refinement_time_dealii_hp.txt");
 
             output_customTimeRef << "Deal.ii" << std::endl;
             output_customTimeRef << "$n_\\text{dof}$" << std::endl;
-            output_customTimeRef << "Time [s]" << std::endl;
+            output_customTimeRef << "$Time [s]$" << std::endl;
             output_customTimeRef << convergence_vector.size() << std::endl;
             for (size_t i = 0; i < convergence_vector.size(); i++)
             {
@@ -570,6 +570,7 @@ namespace AspDEQuFEL
 
         metrics values = {};
         values.max_error = Linfty_error;
+        values.l2_error = L2_error;
         values.error_p1 = error_p1;
         values.error_p2 = error_p2;
         values.error_p3 = error_p3;
