@@ -102,7 +102,7 @@ class Poisson:
 
             self.mesh =  Mesh(geo.GenerateMesh(maxh=0.125)).Distribute(self.comm)
         else:
-            self.mesh = netgen.meshing.Mesh.Recieve(self.comm)
+            self.mesh = netgen.meshing.Mesh.Receive(self.comm)
         
 
     def setup_space(self):
