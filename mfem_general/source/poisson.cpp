@@ -272,7 +272,9 @@ namespace AspDEQuFEL
         double p2[] = {0.25, 0.25, 0.25};
         double p3[] = {0.5, 0.5, 0.5};
 
-        values.error_p1 = abs(postprocessor1(x, *pmesh) - bdr_func(Vector(p1, 3)));
+        double local_error_p1 = abs(postprocessor1(x, *pmesh) - bdr_func(Vector(p1, 3)));
+        MPI_Reduce(&local_error_p1, &values.error_p1, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+
         values.error_p2 = abs(postprocessor2(x, *pmesh) - bdr_func(Vector(p2, 3)));
         values.error_p3 = abs(postprocessor3(x, *pmesh) - bdr_func(Vector(p3, 3)));
         table_vector.push_back(values);
