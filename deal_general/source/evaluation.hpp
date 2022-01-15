@@ -33,7 +33,7 @@ typedef struct metrics
 } metrics;
 
 template <int dim>
-double PointValueEvaluation<dim>::operator()(const DoFHandler<dim> &dof_handler, const Vector<double> &solution) const
+double PointValueEvaluation<dim>::operator()(const DoFHandler<dim> &dof_handler, const LinearAlgebraPETSc::MPI::Vector &solution) const
 {
     double point_value = 1e20;
 
