@@ -332,7 +332,7 @@ namespace AspDEQuFEL
         FESeries::Fourier<dim> fourier = SmoothnessEstimator::Fourier::default_fe_series(fe_collection);
         SmoothnessEstimator::Fourier::coefficient_decay(fourier,
                                                         dof_handler,
-                                                        solution,
+                                                        local_solution,
                                                         smoothness_indicators);
 
         parallel::distributed::GridRefinement::refine_and_coarsen_fixed_number(triangulation, estimated_error_per_cell, 0.15, 0);
@@ -476,19 +476,18 @@ namespace AspDEQuFEL
                                           local_solution,
                                           Solution<dim>(),
                                           difference_per_cell,
-                                          QGauss<dim>(fe.degree + 1),
+                                          quadrature_collection,
                                           VectorTools::L2_norm);
         const double L2_error = VectorTools::compute_global_error(triangulation,
                                                                   difference_per_cell,
                                                                   VectorTools::L2_norm);
 
-        const QTrapezoid<1> q_trapez;
-        const QIterated<dim> q_iterated(q_trapez, fe.degree * 2 + 1);
+
         VectorTools::integrate_difference(dof_handler,
                                           local_solution,
                                           Solution<dim>(),
                                           difference_per_cell,
-                                          q_iterated,
+                                          quadrature_collection,
                                           VectorTools::Linfty_norm);
         const double Linfty_error = VectorTools::compute_global_error(triangulation, difference_per_cell, VectorTools::Linfty_norm);
 

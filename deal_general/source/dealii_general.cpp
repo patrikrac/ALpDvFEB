@@ -19,15 +19,16 @@ int main(int argc, char *argv[])
     try
     {
         Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
-        if(argc == 3)
+        if (argc == 3)
         {
-            AspDEQuFEL::Poisson<3> l(std::atoi(argv[1]), std::atoi(argv[2]));
-        } else 
-        {
-            AspDEQuFEL::PoissonHP<3> l(std::atoi(argv[2]));
+            AspDEQuFEL::Poisson<3> l_h(std::atoi(argv[1]), std::atoi(argv[2]));
+            l_h.run();
         }
-        
-        l.run();
+        else
+        {
+            AspDEQuFEL::PoissonHP<3> l_hp(std::atoi(argv[2]));
+            l_hp.run();
+        }
     }
     catch (std::exception &exc)
     {
