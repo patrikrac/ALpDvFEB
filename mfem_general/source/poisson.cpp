@@ -206,7 +206,8 @@ namespace AspDEQuFEL
 
         refiner.Reset();
 
-        double timing = 0.0;
+        double solve_timing = 0.0;
+        double refine_timing = 0.0;
         int iter = 0;
         while (true)
         {
@@ -227,12 +228,18 @@ namespace AspDEQuFEL
 #ifdef USE_TIMING
             if (myid == 0)
             {
-                timing = printTimer();
+                solve_timing = printTimer();
             }
 #endif
 
-            exact_error(iter, global_dofs, timing, x, error_zero, u);
+            exact_error(iter, global_dofs, solve_timing, x, error_zero, u);
 
+#ifdef USE_TIMING
+            if (myid == 0)
+            {
+                startTimer();
+            }
+#endif
             //Stop the loop if no more elements are marked for refinement or the desired number of DOFs is reached.
             if (global_dofs >= max_dofs || !refine(a, f, fespace, x, error_zero, refiner))
             {
@@ -242,10 +249,21 @@ namespace AspDEQuFEL
                 }
                 break;
             }
+#ifdef USE_TIMING
+            if (myid == 0)
+            {
+                refine_timing = printTimer();
+            }
+#endif
             update(a, f, fespace, x, error_zero);
             iter++;
         }
-
+#ifdef USE_TIMING
+        if (myid == 0)
+        {
+            printTimer();
+        }
+#endif
 #ifdef USE_OUTPUT
         vtk_output(x);
 #endif
@@ -275,14 +293,17 @@ namespace AspDEQuFEL
         double local_error_p1 = abs(postprocessor1(x, *pmesh) - bdr_func(Vector(p1, 3)));
         MPI_Reduce(&local_error_p1, &values.error_p1, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
 
-        values.error_p2 = abs(postprocessor2(x, *pmesh) - bdr_func(Vector(p2, 3)));
-        values.error_p3 = abs(postprocessor3(x, *pmesh) - bdr_func(Vector(p3, 3)));
+        double local_error_p2 = abs(postprocessor2(x, *pmesh) - bdr_func(Vector(p2, 3)));
+        MPI_Reduce(&local_error_p2, &values.error_p2, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+
+        double local_error_p3 = abs(postprocessor3(x, *pmesh) - bdr_func(Vector(p3, 3)));
+        MPI_Reduce(&local_error_p3, &values.error_p3, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+
         table_vector.push_back(values);
         if (myid == 0)
         {
             cout << "Max error for step " << cycle << ": " << setprecision(3) << scientific << values.max_error << endl;
             cout << "L2 error: " << setprecision(3) << scientific << values.l2_error << endl;
-            cout << "Exapme error p1: " << setprecision(3) << scientific << values.error_p1 << endl;
         }
     }
 
@@ -300,9 +321,9 @@ namespace AspDEQuFEL
             std::ofstream output_time_dof("time_dof.txt");
             std::ofstream output_time_l2("time_l2.txt");
             std::ofstream output_time_max("time_max.txt");
-            //std::ofstream output_p1("error_p1.txt");
-            //std::ofstream output_p2("error_p2.txt");
-            //std::ofstream output_p3("error_p3.txt");
+            std::ofstream output_p1("error_p1.txt");
+            std::ofstream output_p2("error_p2.txt");
+            std::ofstream output_p3("error_p3.txt");
 
             output_max << "MFEM" << endl;
             output_max << "$n_\\text{dof}$" << endl;
@@ -328,7 +349,7 @@ namespace AspDEQuFEL
             output_time_max << "$\\left\\|u_h - I_hu\\right\\| _{L_\\infty}$" << endl;
             output_time_max << "Time [s]" << endl;
             output_time_max << table_vector.size() << endl;
-            /*
+
             output_p1 << "$x_1$" << endl;
             output_p1 << "$n_\\text{dof}$" << endl;
             output_p1 << "$|u(x_i) - u_h(x_i)|$" << endl;
@@ -343,7 +364,7 @@ namespace AspDEQuFEL
             output_p3 << "$n_\\text{dof}$" << endl;
             output_p3 << "$|u(x_i) - u_h(x_i)|$" << endl;
             output_p3 << table_vector.size() << endl;
-            */
+
             output << "\\begin{table}[h]" << endl;
             output << "\t\\begin{center}" << endl;
             output << "\t\t\\begin{tabular}{|c|c|c|c|c|} \\hline" << endl;
@@ -357,9 +378,9 @@ namespace AspDEQuFEL
                 output_time_dof << table_vector[i].time << " " << table_vector[i].dofs << endl;
                 output_time_l2 << table_vector[i].time << " " << table_vector[i].l2_error << endl;
                 output_time_max << table_vector[i].time << " " << table_vector[i].max_error << endl;
-                //output_p1 << table_vector[i].dofs << " " << table_vector[i].error_p1 << endl;
-                //output_p2 << table_vector[i].dofs << " " << table_vector[i].error_p2 << endl;
-                //output_p3 << table_vector[i].dofs << " " << table_vector[i].error_p3 << endl;
+                output_p1 << table_vector[i].dofs << " " << table_vector[i].error_p1 << endl;
+                output_p2 << table_vector[i].dofs << " " << table_vector[i].error_p2 << endl;
+                output_p3 << table_vector[i].dofs << " " << table_vector[i].error_p3 << endl;
             }
 
             output << "\t\t\\end{tabular}" << endl;
