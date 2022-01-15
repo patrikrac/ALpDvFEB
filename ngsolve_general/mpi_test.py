@@ -1,4 +1,3 @@
-from mpi4py import MPI
 from netgen.csg import unit_cube
 import netgen.meshing
 
