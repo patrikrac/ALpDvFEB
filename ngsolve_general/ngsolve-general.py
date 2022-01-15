@@ -100,10 +100,11 @@ class Poisson:
             #geo = CSG2d()
             geo.Add (brick)
 
-            self.mesh =  Mesh(geo.GenerateMesh(maxh=0.125)).Distribute(self.comm)
+            ngmesh =  geo.GenerateMesh(maxh=0.125).Distribute(self.comm)
         else:
-            self.mesh = netgen.meshing.Mesh.Receive(self.comm)
+            ngmesh = netgen.meshing.Mesh.Receive(self.comm)
         
+        self.mesh = Mesh(ngmesh)
 
     def setup_space(self):
         """
