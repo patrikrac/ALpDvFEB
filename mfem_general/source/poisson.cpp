@@ -193,8 +193,8 @@ namespace AspDEQuFEL
         a.AddDomainIntegrator(integ);
         f.AddDomainIntegrator(new DomainLFIntegrator(rhs));
 
-        KellyErrorEstimator *estimator{nullptr};
         L2_FECollection flux_fec(order, dim);
+        KellyErrorEstimator *estimator{nullptr};
 
         auto flux_fes = new ParFiniteElementSpace(pmesh, &flux_fec, sdim);
         estimator = new KellyErrorEstimator(*integ, x, flux_fes);
@@ -217,8 +217,7 @@ namespace AspDEQuFEL
                 cout << "Iteration: " << iter << endl
                      << "DOFs: " << global_dofs << endl;
 
-                update(a, f, fespace, x, error_zero);
-                assemble(a,f);
+                assemble(a, f);
 
 #ifdef USE_TIMING
                 startTimer();
@@ -245,6 +244,7 @@ namespace AspDEQuFEL
                 }
                 break;
             }
+            update(a, f, fespace, x, error_zero);
             iter++;
         }
 
