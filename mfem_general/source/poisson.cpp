@@ -121,14 +121,14 @@ namespace AspDEQuFEL
 
         a.FormLinearSystem(ess_tdof_list, x, f, A, X, B);
 
-        HypreBoomerAMG *amg = new HypreBoomerAMG(A);
-        amg->SetPrintLevel(0);
+        HypreBoomerAMG amg(A);
+        amg.SetPrintLevel(0);
 
-        HyprePCG pcg(MPI_COMM_WORLD);
+        HyprePCG pcg(A);
         pcg.SetTol(1e-12);
         pcg.SetMaxIter(2000);
         pcg.SetPrintLevel(3);
-        pcg.SetPreconditioner(*amg);
+        pcg.SetPreconditioner(amg);
         pcg.Mult(B, X);
 
         a.RecoverFEMSolution(X, f, x);
