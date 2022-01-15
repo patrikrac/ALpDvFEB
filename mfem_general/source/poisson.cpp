@@ -193,16 +193,13 @@ namespace AspDEQuFEL
         a.AddDomainIntegrator(integ);
         f.AddDomainIntegrator(new DomainLFIntegrator(rhs));
 
+        KellyErrorEstimator *estimator{nullptr};
         L2_FECollection flux_fec(order, dim);
-        ParFiniteElementSpace flux_fes(pmesh, &flux_fec, sdim);
-        FiniteElementCollection *smooth_flux_fec = NULL;
-        ParFiniteElementSpace *smooth_flux_fes = NULL;
-        smooth_flux_fec = new RT_FECollection(order - 1, dim);
-        smooth_flux_fes = new ParFiniteElementSpace(pmesh, smooth_flux_fec, 1);
 
-        L2ZienkiewiczZhuEstimator estimator(*integ, x, flux_fes, *smooth_flux_fes);
+        auto flux_fes = new ParFiniteElementSpace(pmesh, &flux_fec, sdim);
+        estimator = new KellyErrorEstimator(*integ, x, flux_fes);
 
-        ThresholdRefiner refiner(estimator);
+        ThresholdRefiner refiner(*estimator);
         refiner.SetTotalErrorFraction(0.3);
 
         x = 0.0;
@@ -222,7 +219,7 @@ namespace AspDEQuFEL
 
                 update(a, f, fespace, x, error_zero);
                 assemble(a,f);
-                
+
 #ifdef USE_TIMING
                 startTimer();
 #endif
