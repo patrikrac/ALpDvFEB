@@ -340,7 +340,7 @@ if __name__ == "__main__":
         if not os.path.exists(result_directory):
             os.makedirs(result_directory)
             
-        comm = MPI_Init()
+        comm = MPI.COMM_WORLD
         if comm.rank == 0:
             print("Running with {} processes.".format(comm.size))
         #e = Poisson(int(sys.argv[1]), int(sys.argv[2]))
