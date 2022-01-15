@@ -68,7 +68,7 @@ namespace AspDEQuFEL
         int get_n_dof();
         void solve();
         void refine_grid();
-        void calculate_exact_error(const unsigned int cycle);
+        void calculate_exact_error(const unsigned int cycle, double solution_time, double refinement_time);
         void output_results(const unsigned int cycle) const;
         void output_error();
 
@@ -120,9 +120,9 @@ namespace AspDEQuFEL
                                                     pcout(std::cout, (this_mpi_process == 0)),
                                                     fe(order),
                                                     dof_handler(triangulation),
-                                                    postprocessor1(Point<3>(0.125,0.125,0.125)),
-                                                    postprocessor2(Point<3>(0.25,0.25,0.25)),
-                                                    postprocessor3(Point<3>(0.5,0.5,0.5))
+                                                    postprocessor1(Point<3>(0.125, 0.125, 0.125)),
+                                                    postprocessor2(Point<3>(0.25, 0.25, 0.25)),
+                                                    postprocessor3(Point<3>(0.5, 0.5, 0.5))
     {
     }
 
@@ -293,12 +293,12 @@ namespace AspDEQuFEL
     {
         Vector<float> estimated_error_per_cell(triangulation.n_active_cells());
 
-        KellyErrorEstimator<dim>::estimate(dof_handler, 
-                                                                    QGauss<dim - 1>(fe.degree + 1), 
-                                                                    std::map<types::boundary_id, const Function<dim> *>(), 
-                                                                    local_solution, 
-                                                                    estimated_error_per_cell);
-    
+        KellyErrorEstimator<dim>::estimate(dof_handler,
+                                           QGauss<dim - 1>(fe.degree + 1),
+                                           std::map<types::boundary_id, const Function<dim> *>(),
+                                           local_solution,
+                                           estimated_error_per_cell);
+
         parallel::distributed::GridRefinement::refine_and_coarsen_fixed_number(triangulation, estimated_error_per_cell, 0.15, 0);
 
         triangulation.execute_coarsening_and_refinement();
@@ -331,21 +331,21 @@ namespace AspDEQuFEL
         {
             convergence_table.set_precision("L2", 3);
             convergence_table.set_precision("Linfty", 3);
-            convergence_table.set_precision("error_p1", 3);
-            convergence_table.set_precision("error_p2", 3);
-            convergence_table.set_precision("error_p3", 3);
-            convergence_table.set_scientific("Linfty", true);
-            convergence_table.set_scientific("error_p1", true);
-            convergence_table.set_scientific("error_p2", true);
-            convergence_table.set_scientific("error_p3", true);
+            convergence_table.set_precision("sTime", 3);
+            convergence_table.set_precision("rTime", 3);
 
-            convergence_table.set_tex_caption("cells", "\\# cells");
-            convergence_table.set_tex_caption("dofs", "\\# dofs");
+            convergence_table.set_scientific("L2", true);
+            convergence_table.set_scientific("Linfty", true);
+            convergence_table.set_scientific("rTime", true);
+            convergence_table.set_scientific("sTime", true);
+
+            convergence_table.set_tex_caption("cycle", "cycle");
+            convergence_table.set_tex_caption("cells", "$n_{cells}$");
+            convergence_table.set_tex_caption("dofs", "$n_{dof}$");
             convergence_table.set_tex_caption("L2", "$\\left\\|u_h - I_hu\\right\\| _{L_2}$");
             convergence_table.set_tex_caption("Linfty", "$\\left\\|u_h - I_hu\\right\\| _{L_\\infty}$");
-            convergence_table.set_tex_caption("error_p1", "$|u_h(x_1) - I_hu(x_1)| $");
-            convergence_table.set_tex_caption("error_p2", "$|u_h(x_2) - I_hu(x_2)| $");
-            convergence_table.set_tex_caption("error_p3", "$|u_h(x_3) - I_hu(x_3)| $");
+            convergence_table.set_tex_caption("sTime", "$t_{solve}$");
+            convergence_table.set_tex_caption("rTime", "$t_{refine}$");
 
             std::ofstream error_table_file("error.tex");
             convergence_table.write_tex(error_table_file);
@@ -374,7 +374,6 @@ namespace AspDEQuFEL
             }
             output_customL2.close();
 
-            /*
             std::ofstream output_custom1("error_dealii_p1.txt");
 
             output_custom1 << "$x_1$" << std::endl;
@@ -410,7 +409,54 @@ namespace AspDEQuFEL
                 output_custom3 << convergence_vector[i].n_dofs << " " << convergence_vector[i].error_p3 << std::endl;
             }
             output_custom3.close();
-            */
+
+            std::ofstream output_customTimeDOF("error_dealii_time_dof.txt");
+
+            output_customTimeDOF << "Deal.ii" << std::endl;
+            output_customTimeDOF << "$n_\\text{dof}$" << std::endl;
+            output_customTimeDOF << "Time [s]" << std::endl;
+            output_customTimeDOF << convergence_vector.size() << std::endl;
+            for (size_t i = 0; i < convergence_vector.size(); i++)
+            {
+                output_customTimeDOF << convergence_vector[i].n_dofs << " " << convergence_vector[i].solution_time << std::endl;
+            }
+            output_customTimeDOF.close();
+
+            std::ofstream output_customTimeL2("error_dealii_time_l2.txt");
+
+            output_customTimeL2 << "Deal.ii" << std::endl;
+            output_customTimeL2 << "$\\left\\|u_h - I_hu\\right\\|_{L_2}$" << std::endl;
+            output_customTimeL2 << "Time [s]" << std::endl;
+            output_customTimeL2 << convergence_vector.size() << std::endl;
+            for (size_t i = 0; i < convergence_vector.size(); i++)
+            {
+                output_customTimeL2 << convergence_vector[i].l2_error << " " << convergence_vector[i].solution_time << std::endl;
+            }
+            output_customTimeL2.close();
+
+            std::ofstream output_customTimeMax("error_dealii_time_max.txt");
+
+            output_customTimeMax << "Deal.ii" << std::endl;
+            output_customTimeMax << "$\\left\\|u_h - I_hu\\right\\|_{L_\\infty}$" << std::endl;
+            output_customTimeMax << "Time [s]" << std::endl;
+            output_customTimeMax << convergence_vector.size() << std::endl;
+            for (size_t i = 0; i < convergence_vector.size(); i++)
+            {
+                output_customTimeMax << convergence_vector[i].max_error << " " << convergence_vector[i].solution_time << std::endl;
+            }
+            output_customTimeMax.close();
+
+            std::ofstream output_customTimeRef("error_dealii_refinement_time.txt");
+
+            output_customTimeRef << "Deal.ii" << std::endl;
+            output_customTimeRef << "$n_\\text{dof}$" << std::endl;
+            output_customTimeRef << "Time [s]" << std::endl;
+            output_customTimeRef << convergence_vector.size() << std::endl;
+            for (size_t i = 0; i < convergence_vector.size(); i++)
+            {
+                output_customTimeMax << convergence_vector[i].n_dofs << " " << convergence_vector[i].refinement_time << std::endl;
+            }
+            output_customTimeMax.close();
         }
     }
 
@@ -418,7 +464,7 @@ namespace AspDEQuFEL
     //Calculate the exact error usign the solution class.
     //----------------------------------------------------------------
     template <int dim>
-    void Poisson<dim>::calculate_exact_error(const unsigned int cycle)
+    void Poisson<dim>::calculate_exact_error(const unsigned int cycle, double solution_time, double refinement_time)
     {
         Vector<float> difference_per_cell(triangulation.n_active_cells());
         VectorTools::integrate_difference(dof_handler,
@@ -448,25 +494,23 @@ namespace AspDEQuFEL
         double local_error_p2 = abs(postprocessor2(dof_handler, local_solution) - Solution<dim>().value(Point<dim>(0.25, 0.25, 0.25)));
         double local_error_p3 = abs(postprocessor3(dof_handler, local_solution) - Solution<dim>().value(Point<dim>(0.5, 0.5, 0.5)));
         double error_p1 = Utilities::MPI::min(local_error_p1, mpi_communicator);
-        double error_p2 =  Utilities::MPI::min(local_error_p2, mpi_communicator);
-        double error_p3 =  Utilities::MPI::min(local_error_p3, mpi_communicator);
+        double error_p2 = Utilities::MPI::min(local_error_p2, mpi_communicator);
+        double error_p3 = Utilities::MPI::min(local_error_p3, mpi_communicator);
 
         pcout << "Cycle " << cycle << ':' << std::endl
               << "   Number of active cells:       " << n_active_cells
               << std::endl
               << "   Number of degrees of freedom: " << n_dofs << std::endl
               << "L2 error: " << L2_error << std::endl
-              << "Max error: " << Linfty_error << std::endl
-              << "Test err p 1 =" << error_p1 << std::endl;
+              << "Max error: " << Linfty_error << std::endl;
 
         convergence_table.add_value("cycle", cycle);
         convergence_table.add_value("cells", n_active_cells);
         convergence_table.add_value("dofs", n_dofs);
         convergence_table.add_value("L2", L2_error);
         convergence_table.add_value("Linfty", Linfty_error);
-        convergence_table.add_value("error_p1", error_p1);
-        convergence_table.add_value("error_p2", error_p2);
-        convergence_table.add_value("error_p3", error_p3);
+        convergence_table.add_value("sTime", solution_time);
+        convergence_table.add_value("rTime", refinement_time);
 
         metrics values = {};
         values.max_error = Linfty_error;
@@ -475,6 +519,9 @@ namespace AspDEQuFEL
         values.error_p3 = error_p3;
         values.n_dofs = n_dofs;
         values.cycle = cycle;
+        values.cells = n_active_cells;
+        values.solution_time = solution_time;
+        values.refinement_time = refinement_time;
 
         convergence_vector.push_back(values);
     }
@@ -488,9 +535,13 @@ namespace AspDEQuFEL
         pcout << "Running on " << n_mpi_processes << " MPI rank(s)..." << std::endl;
 
         int cycle = 0;
+        double solution_time = 0.0;
+        double refinement_time = 0.0;
         make_grid();
         while (true)
         {
+            setup_system();
+            assemble_system();
 #ifdef USE_TIMING
             if (this_mpi_process == 0)
             {
@@ -498,18 +549,16 @@ namespace AspDEQuFEL
             }
 #endif
 
-            setup_system();
-            assemble_system();
             solve();
 
 #ifdef USE_TIMING
             if (this_mpi_process == 0)
             {
-                printTimer();
+                solution_time = printTimer();
             }
 #endif
 
-            calculate_exact_error(cycle);
+            calculate_exact_error(cycle, solution_time, refinement_time);
             pcout << "Cycle " << cycle << std::endl;
             pcout << "DOFs: " << get_n_dof() << std::endl;
 
@@ -518,8 +567,19 @@ namespace AspDEQuFEL
             {
                 break;
             }
-
+#ifdef USE_TIMING
+            if (this_mpi_process == 0)
+            {
+                startTimer();
+            }
+#endif
             refine_grid();
+#ifdef USE_TIMING
+            if (this_mpi_process == 0)
+            {
+                refinement_time = printTimer();
+            }
+#endif
             cycle++;
         }
 #ifdef USE_OUTPUT
