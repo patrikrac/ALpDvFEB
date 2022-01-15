@@ -231,7 +231,7 @@ namespace AspDEQuFEL
             }
 #endif
 
-            exact_error(iter, timing, global_dofs, x, error_zero, u);
+            exact_error(iter, global_dofs, timing, x, error_zero, u);
 
             //Stop the loop if no more elements are marked for refinement or the desired number of DOFs is reached.
             if (global_dofs >= max_dofs || !refine(a, f, fespace, x, error_zero, refiner))
@@ -295,8 +295,8 @@ namespace AspDEQuFEL
             std::ofstream output_l2("error_l2_mfem.txt");
 
             std::ofstream output_time_dof("time_dof.txt");
-            std::ofstream output_time_l2("time_dof.txt");
-            std::ofstream output_time_max("time_dof.txt");
+            std::ofstream output_time_l2("time_l2.txt");
+            std::ofstream output_time_max("time_max.txt");
             //std::ofstream output_p1("error_p1.txt");
             //std::ofstream output_p2("error_p2.txt");
             //std::ofstream output_p3("error_p3.txt");
