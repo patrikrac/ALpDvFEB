@@ -93,9 +93,10 @@ def CalcError():
     # Gradient-recovery error estimator
     err = (flux-gf_flux)*(flux-gf_flux)
     elerr = Integrate (err, mesh, VOL, element_wise=True)
-    if elerr is Empty:
+    try:
+        maxerr = max(elerr)
+    except:
         return
-    maxerr = max(elerr)
     l.append ( (V.ndof, sqrt(sum(elerr)) ))
     print ("maxerr = ", maxerr)
 
