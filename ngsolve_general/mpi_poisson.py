@@ -5,6 +5,7 @@
 
 # netgen-imports
 #from netgen.geom2d import unit_square
+from queue import Empty
 from netgen.csg import unit_cube
 import netgen.meshing
 
@@ -92,7 +93,8 @@ def CalcError():
     # Gradient-recovery error estimator
     err = (flux-gf_flux)*(flux-gf_flux)
     elerr = Integrate (err, mesh, VOL, element_wise=True)
-
+    if elerr is Empty:
+        return
     maxerr = max(elerr)
     l.append ( (V.ndof, sqrt(sum(elerr)) ))
     print ("maxerr = ", maxerr)
