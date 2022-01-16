@@ -78,6 +78,7 @@ namespace AspDEQuFEL
 
         timing::Timer timer;
 #endif
+        timing::Timer global_timer;
 
         int max_dofs;
 
@@ -333,11 +334,13 @@ namespace AspDEQuFEL
             convergence_table.set_precision("Linfty", 3);
             convergence_table.set_precision("sTime", 3);
             convergence_table.set_precision("rTime", 3);
+            convergence_table.set_precision("totTime", 3);
 
             convergence_table.set_scientific("L2", true);
             convergence_table.set_scientific("Linfty", true);
             convergence_table.set_scientific("rTime", true);
             convergence_table.set_scientific("sTime", true);
+            convergence_table.set_scientific("totTime", true);
 
             convergence_table.set_tex_caption("cycle", "cycle");
             convergence_table.set_tex_caption("cells", "$n_{cells}$");
@@ -346,6 +349,7 @@ namespace AspDEQuFEL
             convergence_table.set_tex_caption("Linfty", "$\\left\\|u_h - I_hu\\right\\| _{L_\\infty}$");
             convergence_table.set_tex_caption("sTime", "$t_{solve}$");
             convergence_table.set_tex_caption("rTime", "$t_{refine}$");
+            convergence_table.set_tex_caption("totTime", "$t_{cycle}$");
 
             std::ofstream error_table_file("error.tex");
             convergence_table.write_tex(error_table_file);
@@ -425,28 +429,28 @@ namespace AspDEQuFEL
             std::ofstream output_customTimeL2("time_l2_dealii.txt");
 
             output_customTimeL2 << "Deal.ii" << std::endl;
-            output_customTimeL2 << "$\\left\\|u_h - I_hu\\right\\|_{L_2}$" << std::endl;
             output_customTimeL2 << "$Time [s]$" << std::endl;
+            output_customTimeL2 << "$\\left\\|u_h - I_hu\\right\\|_{L_2}$" << std::endl;
             output_customTimeL2 << convergence_vector.size() << std::endl;
             for (size_t i = 0; i < convergence_vector.size(); i++)
             {
-                output_customTimeL2 << convergence_vector[i].l2_error << " " << convergence_vector[i].solution_time << std::endl;
+                output_customTimeL2 << convergence_vector[i].solution_time << " " << convergence_vector[i].l2_error << std::endl;
             }
             output_customTimeL2.close();
 
             std::ofstream output_customTimeMax("time_max_dealii.txt");
 
             output_customTimeMax << "Deal.ii" << std::endl;
-            output_customTimeMax << "$\\left\\|u_h - I_hu\\right\\|_{L_\\infty}$" << std::endl;
             output_customTimeMax << "$Time [s]$" << std::endl;
+            output_customTimeMax << "$\\left\\|u_h - I_hu\\right\\|_{L_\\infty}$" << std::endl;
             output_customTimeMax << convergence_vector.size() << std::endl;
             for (size_t i = 0; i < convergence_vector.size(); i++)
             {
-                output_customTimeMax << convergence_vector[i].max_error << " " << convergence_vector[i].solution_time << std::endl;
+                output_customTimeMax << convergence_vector[i].solution_time << " " << convergence_vector[i].max_error << std::endl;
             }
             output_customTimeMax.close();
 
-            std::ofstream output_customTimeRef("refinement_time_dealii.txt");
+            std::ofstream output_customTimeRef("refinement_time_dof_dealii.txt");
 
             output_customTimeRef << "Deal.ii" << std::endl;
             output_customTimeRef << "$n_\\text{dof}$" << std::endl;
@@ -457,6 +461,66 @@ namespace AspDEQuFEL
                 output_customTimeRef << convergence_vector[i].n_dofs << " " << convergence_vector[i].refinement_time << std::endl;
             }
             output_customTimeRef.close();
+
+            std::ofstream output_customTimeRefL2("refinement_time_l2_dealii.txt");
+
+            output_customTimeRefL2 << "Deal.ii" << std::endl;
+            output_customTimeRefL2 << "$Time [s]$" << std::endl;
+            output_customTimeRefL2 << "$\\left\\|u_h - I_hu\\right\\|_{L_2}$" << std::endl;
+            output_customTimeRefL2 << convergence_vector.size() << std::endl;
+            for (size_t i = 0; i < convergence_vector.size(); i++)
+            {
+                output_customTimeRefL2 << convergence_vector[i].refinement_time << " " << convergence_vector[i].l2_error << std::endl;
+            }
+            output_customTimeRefL2.close();
+
+            std::ofstream output_customTimeRefMax("refinement_time_max_dealii.txt");
+
+            output_customTimeRefMax << "Deal.ii" << std::endl;
+            output_customTimeRefMax << "$Time [s]$" << std::endl;
+            output_customTimeRefMax << "$\\left\\|u_h - I_hu\\right\\|_{L_\\infty}$" << std::endl;
+            output_customTimeRefMax << convergence_vector.size() << std::endl;
+            for (size_t i = 0; i < convergence_vector.size(); i++)
+            {
+                output_customTimeRefMax << convergence_vector[i].refinement_time << " " << convergence_vector[i].max_error << std::endl;
+            }
+            output_customTimeRefMax.close();
+
+            std::ofstream output_customTimeTotal("total_time_dof_dealii.txt");
+
+            output_customTimeTotal << "Deal.ii" << std::endl;
+            output_customTimeTotal << "$n_\\text{dof}$" << std::endl;
+            output_customTimeTotal << "$Time [s]$" << std::endl;
+            output_customTimeTotal << convergence_vector.size() << std::endl;
+            for (size_t i = 0; i < convergence_vector.size(); i++)
+            {
+                output_customTimeTotal << convergence_vector[i].n_dofs << " " << convergence_vector[i].total_time << std::endl;
+            }
+            output_customTimeTotal.close();
+
+            std::ofstream output_customTimeTotalL2("total_time_l2_dealii.txt");
+
+            output_customTimeTotalL2 << "Deal.ii" << std::endl;
+            output_customTimeTotalL2 << "$Time [s]$" << std::endl;
+            output_customTimeTotalL2 << "$\\left\\|u_h - I_hu\\right\\|_{L_2}$" << std::endl;
+            output_customTimeTotalL2 << convergence_vector.size() << std::endl;
+            for (size_t i = 0; i < convergence_vector.size(); i++)
+            {
+                output_customTimeTotalL2 << convergence_vector[i].total_time << " " << convergence_vector[i].l2_error << std::endl;
+            }
+            output_customTimeTotalL2.close();
+
+            std::ofstream output_customTimeTotalMax("refinement_time_max_dealii.txt");
+
+            output_customTimeTotalMax << "Deal.ii" << std::endl;
+            output_customTimeTotalMax << "$Time [s]$" << std::endl;
+            output_customTimeTotalMax << "$\\left\\|u_h - I_hu\\right\\|_{L_\\infty}$" << std::endl;
+            output_customTimeTotalMax << convergence_vector.size() << std::endl;
+            for (size_t i = 0; i < convergence_vector.size(); i++)
+            {
+                output_customTimeTotalMax << convergence_vector[i].total_time << " " << convergence_vector[i].max_error << std::endl;
+            }
+            output_customTimeTotalMax.close();
         }
     }
 
@@ -523,8 +587,13 @@ namespace AspDEQuFEL
         values.cells = n_active_cells;
         values.solution_time = solution_time;
         values.refinement_time = refinement_time;
+        values.total_time = global_timer.elapsed();
+
+        convergence_table.add_value("totTime", values.total_time);
 
         convergence_vector.push_back(values);
+
+        global_timer.reset();
     }
 
     //------------------------------
@@ -539,6 +608,7 @@ namespace AspDEQuFEL
         double solution_time = 0.0;
         double refinement_time = 0.0;
         make_grid();
+        global_timer.reset();
         while (true)
         {
             setup_system();
