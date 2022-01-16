@@ -58,7 +58,8 @@ a += lam*grad(u)*grad(v)*dx
 f = LinearForm(fes)
 f += CoefficientFunction([0, 0, 1])*v*dx
 
-c = MultiGridPreconditioner(a, inverse = "sparsecholesky")
+#c = MultiGridPreconditioner(a, inverse = "sparsecholesky")
+c = Preconditioner(a, type="hypre")  
 
 gfu = GridFunction(fes, autoupdate=True)
 Draw (gfu)
