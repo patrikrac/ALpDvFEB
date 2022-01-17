@@ -57,7 +57,7 @@ class Poisson:
         #self.alpha = 1.0/2.0
         #self.r = sqrt((x-0.5)*(x-0.5) + y*y)
         #self.phi = atan2(y,(x-0.5))
-        k = 10.0
+        #k = 10.0
 
         #Define the boundary function g
         #self.g = CoefficientFunction([(self.r**self.alpha)*sin(self.alpha*self.phi) if bc=="L" else (self.r**self.alpha)*sin(self.alpha*(2*math.pi + self.phi)) if bc=="I" else 0 for bc in self.mesh.GetBoundaries()])
@@ -92,7 +92,7 @@ class Poisson:
         #Get the Bilinear and Linear form aswell as the solver.
         (self.a, self.f, self.c) = self.setup_system()
         
-        self.bvp = BVP(bf=self.a, lf=self.f, gf=self.gfu, pre=self.c)
+        self.bvp = BVP(bf=self.a, lf=self.f, gf=self.gfu, pre=self.c, solver = CGSolver(self.a, self.c), tol=1e-12, maxsteps=2000)
 
 
     def make_mesh(self):
@@ -182,8 +182,7 @@ class Poisson:
         Solve the Problem by assembling the system and using the predefined solver.
         """
         self.c.Update()
-        inv = CGSolver(self.a.mat, self.c.mat)
-        self.gfu.vec.data = inv * self.f.vec
+        self.bvp.Do()
 
 
     def output_vtk(self, cycle):
