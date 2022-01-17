@@ -68,7 +68,7 @@ namespace AspDEQuFEL
         int get_n_dof();
         void solve();
         void refine_grid();
-        void calculate_exact_error(const unsigned int cycle, double solution_time, double refinement_time);
+        void calculate_exact_error(const unsigned int cycle, double solution_time, double refinement_time, double assembly_time);
         void output_results(const unsigned int cycle) const;
         void output_error();
 
@@ -78,7 +78,6 @@ namespace AspDEQuFEL
 
         timing::Timer timer;
 #endif
-        timing::Timer global_timer;
 
         int max_dofs;
 
@@ -334,13 +333,13 @@ namespace AspDEQuFEL
             convergence_table.set_precision("Linfty", 3);
             convergence_table.set_precision("sTime", 3);
             convergence_table.set_precision("rTime", 3);
-            convergence_table.set_precision("totTime", 3);
+            convergence_table.set_precision("assemTime", 3);
 
             convergence_table.set_scientific("L2", true);
             convergence_table.set_scientific("Linfty", true);
             convergence_table.set_scientific("rTime", true);
             convergence_table.set_scientific("sTime", true);
-            convergence_table.set_scientific("totTime", true);
+            convergence_table.set_scientific("assemTime", true);
 
             convergence_table.set_tex_caption("cycle", "cycle");
             convergence_table.set_tex_caption("cells", "$n_{cells}$");
@@ -349,9 +348,9 @@ namespace AspDEQuFEL
             convergence_table.set_tex_caption("Linfty", "$\\left\\|u_h - I_hu\\right\\| _{L_\\infty}$");
             convergence_table.set_tex_caption("sTime", "$t_{solve}$");
             convergence_table.set_tex_caption("rTime", "$t_{refine}$");
-            convergence_table.set_tex_caption("totTime", "$t_{cycle}$");
+            convergence_table.set_tex_caption("assemTime", "$t_{assembly}$");
 
-            std::ofstream error_table_file("error.tex");
+            std::ofstream error_table_file("error_dealii.tex");
             convergence_table.write_tex(error_table_file);
 
             std::ofstream output_customMax("error_max_dealii.txt");
@@ -486,41 +485,41 @@ namespace AspDEQuFEL
             }
             output_customTimeRefMax.close();
 
-            std::ofstream output_customTimeTotal("total_time_dof_dealii.txt");
+            std::ofstream output_customTimeAssem("assembly_time_dof_dealii.txt");
 
-            output_customTimeTotal << "Deal.ii" << std::endl;
-            output_customTimeTotal << "$n_\\text{dof}$" << std::endl;
-            output_customTimeTotal << "$Time [s]$" << std::endl;
-            output_customTimeTotal << convergence_vector.size() << std::endl;
+            output_customTimeAssem << "Deal.ii" << std::endl;
+            output_customTimeAssem << "$n_\\text{dof}$" << std::endl;
+            output_customTimeAssem << "$Time [s]$" << std::endl;
+            output_customTimeAssem << convergence_vector.size() << std::endl;
             for (size_t i = 0; i < convergence_vector.size(); i++)
             {
-                output_customTimeTotal << convergence_vector[i].n_dofs << " " << convergence_vector[i].total_time << std::endl;
+                output_customTimeAssem << convergence_vector[i].n_dofs << " " << convergence_vector[i].assembly_time << std::endl;
             }
-            output_customTimeTotal.close();
+            output_customTimeAssem.close();
 
-            std::ofstream output_customTimeTotalL2("total_time_l2_dealii.txt");
+            std::ofstream output_customTimeAssemL2("assembly_time_l2_dealii.txt");
 
-            output_customTimeTotalL2 << "Deal.ii" << std::endl;
-            output_customTimeTotalL2 << "$Time [s]$" << std::endl;
-            output_customTimeTotalL2 << "$\\left\\|u_h - I_hu\\right\\|_{L_2}$" << std::endl;
-            output_customTimeTotalL2 << convergence_vector.size() << std::endl;
+            output_customTimeAssemL2 << "Deal.ii" << std::endl;
+            output_customTimeAssemL2 << "$Time [s]$" << std::endl;
+            output_customTimeAssemL2 << "$\\left\\|u_h - I_hu\\right\\|_{L_2}$" << std::endl;
+            output_customTimeAssemL2 << convergence_vector.size() << std::endl;
             for (size_t i = 0; i < convergence_vector.size(); i++)
             {
-                output_customTimeTotalL2 << convergence_vector[i].total_time << " " << convergence_vector[i].l2_error << std::endl;
+                output_customTimeAssemL2 << convergence_vector[i].assembly_time << " " << convergence_vector[i].l2_error << std::endl;
             }
-            output_customTimeTotalL2.close();
+            output_customTimeAssemL2.close();
 
-            std::ofstream output_customTimeTotalMax("refinement_time_max_dealii.txt");
+            std::ofstream output_customTimeAssemMax("assembly_time_max_dealii.txt");
 
-            output_customTimeTotalMax << "Deal.ii" << std::endl;
-            output_customTimeTotalMax << "$Time [s]$" << std::endl;
-            output_customTimeTotalMax << "$\\left\\|u_h - I_hu\\right\\|_{L_\\infty}$" << std::endl;
-            output_customTimeTotalMax << convergence_vector.size() << std::endl;
+            output_customTimeAssemMax << "Deal.ii" << std::endl;
+            output_customTimeAssemMax << "$Time [s]$" << std::endl;
+            output_customTimeAssemMax << "$\\left\\|u_h - I_hu\\right\\|_{L_\\infty}$" << std::endl;
+            output_customTimeAssemMax << convergence_vector.size() << std::endl;
             for (size_t i = 0; i < convergence_vector.size(); i++)
             {
-                output_customTimeTotalMax << convergence_vector[i].total_time << " " << convergence_vector[i].max_error << std::endl;
+                output_customTimeAssemMax << convergence_vector[i].assembly_time << " " << convergence_vector[i].max_error << std::endl;
             }
-            output_customTimeTotalMax.close();
+            output_customTimeAssemMax.close();
         }
     }
 
@@ -528,7 +527,7 @@ namespace AspDEQuFEL
     //Calculate the exact error usign the solution class.
     //----------------------------------------------------------------
     template <int dim>
-    void Poisson<dim>::calculate_exact_error(const unsigned int cycle, double solution_time, double refinement_time)
+    void Poisson<dim>::calculate_exact_error(const unsigned int cycle, double solution_time, double refinement_time, double assembly_time)
     {
         Vector<float> difference_per_cell(triangulation.n_active_cells());
         VectorTools::integrate_difference(dof_handler,
@@ -575,6 +574,7 @@ namespace AspDEQuFEL
         convergence_table.add_value("Linfty", Linfty_error);
         convergence_table.add_value("sTime", solution_time);
         convergence_table.add_value("rTime", refinement_time);
+        convergence_table.add_value("assemTime", values.assembly_time);
 
         metrics values = {};
         values.max_error = Linfty_error;
@@ -587,13 +587,9 @@ namespace AspDEQuFEL
         values.cells = n_active_cells;
         values.solution_time = solution_time;
         values.refinement_time = refinement_time;
-        values.total_time = global_timer.elapsed();
-
-        convergence_table.add_value("totTime", values.total_time);
+        values.assembly_time = assembly_time;
 
         convergence_vector.push_back(values);
-
-        global_timer.reset();
     }
 
     //------------------------------
@@ -607,12 +603,27 @@ namespace AspDEQuFEL
         int cycle = 0;
         double solution_time = 0.0;
         double refinement_time = 0.0;
+        double assembly_time = 0.0;
         make_grid();
-        global_timer.reset();
         while (true)
         {
+#ifdef USE_TIMING
+            if (this_mpi_process == 0)
+            {
+                startTimer();
+            }
+#endif
+
             setup_system();
             assemble_system();
+
+#ifdef USE_TIMING
+            if (this_mpi_process == 0)
+            {
+                assembly_time = printTimer();
+            }
+#endif
+            
 #ifdef USE_TIMING
             if (this_mpi_process == 0)
             {

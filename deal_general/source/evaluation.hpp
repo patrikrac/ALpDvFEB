@@ -27,7 +27,7 @@ typedef struct metrics
     double l2_error;
     double solution_time;
     double refinement_time;
-    double total_time;
+    double assembly_time;
     double error_p1;
     double error_p2;
     double error_p3;

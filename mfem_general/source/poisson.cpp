@@ -12,7 +12,6 @@ namespace AspDEQuFEL
     /**********
  * Wrapper around the timer functions that are given.
  * */
-    timing::Timer global_timer;
     timing::Timer timer;
     // Starts or resets the current clock.
     void startTimer()
@@ -200,15 +199,27 @@ namespace AspDEQuFEL
 
         refiner.Reset();
 
-        global_timer.reset();
-
         double solve_timing = 0.0;
         double refine_timing = 0.0;
+        double assembly_time = 0.0;
         int iter = 0;
         while (true)
         {
             HYPRE_BigInt global_dofs = fespace.GlobalTrueVSize();
+
+#ifdef USE_TIMING
+            startTimer();
+#endif
+
             assemble(a, f);
+
+#ifdef USE_TIMING
+            if (myid == 0)
+            {
+                assembly_time = printTimer();
+            }
+#endif
+
             if (myid == 0)
             {
                 cout << "Iteration: " << iter << endl
@@ -228,7 +239,7 @@ namespace AspDEQuFEL
             }
 #endif
 
-            exact_error(iter, global_dofs, solve_timing, refine_timing, x, u);
+            exact_error(iter, global_dofs, solve_timing, refine_timing, assembly_time, x, u);
 
 #ifdef USE_TIMING
             if (myid == 0)
@@ -272,7 +283,7 @@ namespace AspDEQuFEL
     //----------------------------------------------------------------
     //Calculate the exact error
     //----------------------------------------------------------------
-    void Poisson::exact_error(int cycle, int dofs, double solution_time, double refinement_time, ParGridFunction &x, FunctionCoefficient &u)
+    void Poisson::exact_error(int cycle, int dofs, double solution_time, double refinement_time, double assembly_time, ParGridFunction &x, FunctionCoefficient &u)
     {
 
         error_values values = {};
@@ -280,7 +291,7 @@ namespace AspDEQuFEL
         values.dofs = dofs;
         values.solution_time = solution_time;
         values.refinement_time = refinement_time;
-        values.total_time = global_timer.elapsed();
+        values.assembly_time = assembly_time;
         values.cells = pmesh->GetNE();
         values.max_error = x.ComputeMaxError(u);
         values.l2_error = x.ComputeL2Error(u);
@@ -304,7 +315,6 @@ namespace AspDEQuFEL
             cout << "Max error for step " << cycle << ": " << setprecision(3) << scientific << values.max_error << endl;
             cout << "L2 error: " << setprecision(3) << scientific << values.l2_error << endl;
         }
-        global_timer.reset();
     }
 
     //----------------------------------------------------------------
@@ -326,9 +336,9 @@ namespace AspDEQuFEL
             std::ofstream output_refinement_time_l2("time_refinement_l2_mfem.txt");
             std::ofstream output_refinement_time_max("time_refinement_max_mfem.txt");
 
-            std::ofstream output_total_time_dof("time_total_dof_mfem.txt");
-            std::ofstream output_total_time_l2("time_total_l2_mfem.txt");
-            std::ofstream output_total_time_max("time_total_max_mfem.txt");
+            std::ofstream output_assembly_time_dof("time_assembly_dof_mfem.txt");
+            std::ofstream output_assembly_time_l2("time_assembly_l2_mfem.txt");
+            std::ofstream output_assembly_time_max("time_assembly_max_mfem.txt");
 
             std::ofstream output_p1("error_p1_mfem.txt");
             std::ofstream output_p2("error_p2_mfem.txt");
@@ -354,10 +364,10 @@ namespace AspDEQuFEL
             output_refinement_time_dof << "$Time [s]$" << endl;
             output_refinement_time_dof << table_vector.size() << endl;
 
-            output_total_time_dof << "MFEM" << endl;
-            output_total_time_dof << "$n_\\text{dof}$" << endl;
-            output_total_time_dof << "$Time [s]$" << endl;
-            output_total_time_dof << table_vector.size() << endl;
+            output_assembly_time_dof << "MFEM" << endl;
+            output_assembly_time_dof << "$n_\\text{dof}$" << endl;
+            output_assembly_time_dof << "$Time [s]$" << endl;
+            output_assembly_time_dof << table_vector.size() << endl;
 
             output_time_l2 << "MFEM" << endl;
             output_time_l2 << "$Time [s]$" << endl;
@@ -379,15 +389,15 @@ namespace AspDEQuFEL
             output_refinement_time_max << "$\\left\\|u_h - I_hu\\right\\| _{L_\\infty}$" << endl;
             output_refinement_time_max << table_vector.size() << endl;
 
-            output_total_time_l2 << "MFEM" << endl;
-            output_total_time_l2 << "$Time [s]$" << endl;
-            output_total_time_l2 << "$\\left\\|u_h - I_hu\\right\\| _{L_2}$" << endl;
-            output_total_time_l2 << table_vector.size() << endl;
+            output_assembly_time_l2 << "MFEM" << endl;
+            output_assembly_time_l2 << "$Time [s]$" << endl;
+            output_assembly_time_l2 << "$\\left\\|u_h - I_hu\\right\\| _{L_2}$" << endl;
+            output_assembly_time_l2 << table_vector.size() << endl;
 
-            output_total_time_max << "MFEM" << endl;
-            output_total_time_max << "$Time [s]$" << endl;
-            output_total_time_max << "$\\left\\|u_h - I_hu\\right\\| _{L_\\infty}$" << endl;
-            output_total_time_max << table_vector.size() << endl;
+            output_assembly_time_max << "MFEM" << endl;
+            output_assembly_time_max << "$Time [s]$" << endl;
+            output_assembly_time_max << "$\\left\\|u_h - I_hu\\right\\| _{L_\\infty}$" << endl;
+            output_assembly_time_max << table_vector.size() << endl;
 
             output_p1 << "$x_1$" << endl;
             output_p1 << "$n_\\text{dof}$" << endl;
@@ -408,28 +418,28 @@ namespace AspDEQuFEL
             output << "\t\\begin{center}" << endl;
             output << "\t\t\\begin{tabular}{|c|c|c|c|c|c|c|c|} \\hline" << endl;
 
-            output << "\t\t\tcycle & $n_{cells} $ & $n_{dof}$ & $\\left\\|u_h - I_hu\\right\\| _{L_2}$ & $\\left\\|u_h - I_hu\\right\\| _{L_\\infty}$ & $t_{solve}$ & $t_{refine}$ & $t_{cycle}$\\\\ \\hline" << endl;
+            output << "\t\t\tcycle & $n_{cells} $ & $n_{dof}$ & $\\left\\|u_h - I_hu\\right\\| _{L_2}$ & $\\left\\|u_h - I_hu\\right\\| _{L_\\infty}$ & $t_{solve}$ & $t_{refine}$ & $t_{assembly}$\\\\ \\hline" << endl;
             for (int i = 0; i < table_vector.size(); i++)
             {
                 output << "\t\t\t" << table_vector[i].cycle << " & " << table_vector[i].cells << " & " << table_vector[i].dofs << " & " << setprecision(3) << scientific << table_vector[i].l2_error << " & " << setprecision(3) << scientific << table_vector[i].max_error << " & "
                        << setprecision(3) << scientific << table_vector[i].solution_time << " & "
                        << setprecision(3) << scientific << table_vector[i].refinement_time << " & "
-                       << setprecision(3) << scientific << table_vector[i].total_time << "\\\\ \\hline" << endl;
+                       << setprecision(3) << scientific << table_vector[i].assembly_time << "\\\\ \\hline" << endl;
                 output_max << table_vector[i].dofs << " " << table_vector[i].max_error << endl;
                 output_l2 << table_vector[i].dofs << " " << table_vector[i].l2_error << endl;
 
-                output_time_dof << table_vector[i].solution_time << " " << table_vector[i].dofs << endl;
-                output_refinement_time_dof << table_vector[i].refinement_time << " " << table_vector[i].dofs << endl;
-                output_total_time_dof << table_vector[i].total_time << " " << table_vector[i].dofs << endl;
+                output_time_dof << table_vector[i].dofs << " " << table_vector[i].solution_time << endl;
+                output_refinement_time_dof << table_vector[i].dofs << " " << table_vector[i].refinement_time << endl;
+                output_assembly_time_dof << table_vector[i].dofs << " " << table_vector[i].assembly_time << endl;
 
-                output_time_l2 << table_vector[i].l2_error << " " << table_vector[i].solution_time << endl;
-                output_time_max << table_vector[i].max_error << " " << table_vector[i].solution_time << endl;
+                output_time_l2 << table_vector[i].solution_time << " " << table_vector[i].l2_error << endl;
+                output_time_max << table_vector[i].solution_time << " " << table_vector[i].max_error << endl;
 
-                output_refinement_time_l2 << table_vector[i].l2_error << " " << table_vector[i].refinement_time << endl;
-                output_refinement_time_max << table_vector[i].max_error << " " << table_vector[i].refinement_time << endl;
+                output_refinement_time_l2 << table_vector[i].refinement_time << " " << table_vector[i].l2_error << endl;
+                output_refinement_time_max << table_vector[i].refinement_time << " " << table_vector[i].max_error << endl;
 
-                output_total_time_l2 << table_vector[i].l2_error << " " << table_vector[i].total_time << endl;
-                output_total_time_max << table_vector[i].max_error << " " << table_vector[i].total_time << endl;
+                output_assembly_time_l2 << table_vector[i].solution_time << " " << table_vector[i].l2_error << endl;
+                output_assembly_time_max << table_vector[i].assembly_time << " " << table_vector[i].max_error << endl;
 
                 output_p1 << table_vector[i].dofs << " " << table_vector[i].error_p1 << endl;
                 output_p2 << table_vector[i].dofs << " " << table_vector[i].error_p2 << endl;
