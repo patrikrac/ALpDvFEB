@@ -92,7 +92,7 @@ class Poisson:
         #Get the Bilinear and Linear form aswell as the solver.
         (self.a, self.f, self.c) = self.setup_system()
         
-        self.bvp = BVP(bf=self.a, lf=self.f, gf=self.gfu, pre=self.c, tol=1e-12, maxsteps=2000)
+        self.bvp = BVP(bf=self.a, lf=self.f, gf=self.gfu, pre=self.c, prec=1e-12, maxsteps=2000)
 
 
     def make_mesh(self):
@@ -171,7 +171,7 @@ class Poisson:
         maxerr = max(eta2)
 
         for el in self.mesh.Elements():
-            self.mesh.SetRefinementFlag(el, eta2[el.nr] > 0.25*maxerr)
+            self.mesh.SetRefinementFlag(el, eta2[el.nr] > 0.2*maxerr)
 
     def assemble(self):
         self.a.Assemble()
