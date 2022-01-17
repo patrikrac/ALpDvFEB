@@ -57,24 +57,24 @@ class Poisson:
         #self.alpha = 1.0/2.0
         #self.r = sqrt((x-0.5)*(x-0.5) + y*y)
         #self.phi = atan2(y,(x-0.5))
-        k = 10.0
+        #k = 10.0
 
         #Define the boundary function g
         #self.g = CoefficientFunction([(self.r**self.alpha)*sin(self.alpha*self.phi) if bc=="L" else (self.r**self.alpha)*sin(self.alpha*(2*math.pi + self.phi)) if bc=="I" else 0 for bc in self.mesh.GetBoundaries()])
         #self.g = (self.r**self.alpha)*sin(self.alpha*self.phi)* (z**2)
-        #self.g=exp(-10*(x+y))*(z*z)
-        self.g = sin(k*x) * cos(2*k*y) * exp(z)
+        self.g=exp(-10*(x+y))*(z*z)
+        #self.g = sin(k*x) * cos(2*k*y) * exp(z)
 
         #The exact solution of the problem. The mesh is divided into different materiels through a line. This is necessary in order to define teh function but can be ommited if the errror estimation isn't wanted.
         #self.uexact = CoefficientFunction([(self.r**self.alpha)*sin(self.alpha*self.phi) if m=="upper" else (self.r**self.alpha)*sin(self.alpha*(2*math.pi + self.phi)) if m=="lower" else 0 for m in self.mesh.GetMaterials()])
         #self.uexact = (self.r**self.alpha)*sin(self.alpha*self.phi)*(z**2)
-        #self.uexact = exp(-10*(x+y))*(z*z)
-        self.uexact = sin(k*x) * cos(2*k*y) * exp(z)
+        self.uexact = exp(-10*(x+y))*(z*z)
+        #self.uexact = sin(k*x) * cos(2*k*y) * exp(z)
 
         #Define the right hand side of the poission problem
-        #self.rhs = -(200*(z*z) + 2)*exp(-10*(x+y))
+        self.rhs = -(200*(z*z) + 2)*exp(-10*(x+y))
         #self.rhs = -2.0 * (self.r**self.alpha) * sin(self.alpha*self.phi)
-        self.rhs = (5*k*k - 1) * sin(k * x) * cos(2 * k * y) * exp(z)
+        #self.rhs = (5*k*k - 1) * sin(k * x) * cos(2 * k * y) * exp(z)
         #=============================================
         
         #Generate the mesh
@@ -92,7 +92,7 @@ class Poisson:
         #Get the Bilinear and Linear form aswell as the solver.
         (self.a, self.f, self.c) = self.setup_system()
         
-        self.bvp = BVP(bf=self.a, lf=self.f, gf=self.gfu, pre=self.c)
+        self.bvp = BVP(bf=self.a, lf=self.f, gf=self.gfu, pre=self.c, prec=1e-12, maxsteps=2000)
 
 
     def make_mesh(self):
@@ -147,7 +147,8 @@ class Poisson:
         f += self.rhs*v*dx
         
         #Define the solver to be used to solve the problem
-        c = MultiGridPreconditioner(a, inverse = "sparsecholesky")
+        #c = MultiGridPreconditioner(a, inverse = "sparsecholesky")
+        c = Preconditioner(a, type="bddc")
 
         return (a,f,c)
     
@@ -170,7 +171,7 @@ class Poisson:
         maxerr = max(eta2)
 
         for el in self.mesh.Elements():
-            self.mesh.SetRefinementFlag(el, eta2[el.nr] > 0.25*maxerr)
+            self.mesh.SetRefinementFlag(el, eta2[el.nr] > 0.2*maxerr)
 
     def assemble(self):
         self.a.Assemble()
@@ -181,8 +182,7 @@ class Poisson:
         Solve the Problem by assembling the system and using the predefined solver.
         """
         self.c.Update()
-        inv = CGSolver(self.a.mat, self.c.mat)
-        self.gfu.vec.data = inv * self.f.vec
+        self.bvp.Do()
 
 
     def output_vtk(self, cycle):
@@ -422,7 +422,7 @@ class Poisson:
                 if __output__:
                     self.exact_error(cycle, ref_time, sol_time, assem_time)
                 
-                if self.fes.ndof < self.max_dof:
+                if self.fes.ndof >= self.max_dof:
                     break
                 
                 if __timing__:
