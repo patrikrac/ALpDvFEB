@@ -98,26 +98,23 @@ namespace AspDEQuFEL
         f.Update();
     }
 
-    void Poisson::assemble(ParBilinearForm &a, ParLinearForm &f)
+    void Poisson::assemble(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace &fespace, ParGridFunction &x, Array<int> &ess_bdr, FunctionCoefficient &bdr)
     {
         f.Assemble();
         a.Assemble();
+
+        x.ProjectBdrCoefficient(bdr, ess_bdr);
+        Array<int> ess_tdof_list;
+        fespace.GetEssentialTrueDofs(ess_bdr, ess_tdof_list);
+
+        a.FormLinearSystem(ess_tdof_list, x, f, A, X, B);
     }
 
     //----------------------------------------------------------------
     //Solve the Problem on the current mesh
     //----------------------------------------------------------------
-    void Poisson::solve(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace &fespace, ParGridFunction &x, Array<int> &ess_bdr, FunctionCoefficient &bdr)
+    void Poisson::solve(ParBilinearForm &a, ParLinearForm &f,  ParGridFunction &x)
     {
-        x.ProjectBdrCoefficient(bdr, ess_bdr);
-        Array<int> ess_tdof_list;
-        fespace.GetEssentialTrueDofs(ess_bdr, ess_tdof_list);
-
-        HypreParMatrix A;
-        Vector B, X;
-
-        a.FormLinearSystem(ess_tdof_list, x, f, A, X, B);
-
         HypreBoomerAMG *amg = new HypreBoomerAMG(A);
         amg->SetPrintLevel(0);
 
@@ -211,7 +208,7 @@ namespace AspDEQuFEL
             startTimer();
 #endif
 
-            assemble(a, f);
+            assemble(a, f, fespace, x, ess_bdr, bdr);
 
 #ifdef USE_TIMING
             if (myid == 0)
@@ -230,7 +227,7 @@ namespace AspDEQuFEL
 #endif
             }
 
-            solve(a, f, fespace, x, ess_bdr, bdr);
+            solve(a, f, x);
 
 #ifdef USE_TIMING
             if (myid == 0)

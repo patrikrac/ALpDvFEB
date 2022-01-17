@@ -36,8 +36,8 @@ namespace AspDEQuFEL
       void make_mesh();
 
       void update(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace &fespace, ParGridFunction &x);
-      void assemble(ParBilinearForm &a, ParLinearForm &f);
-      void solve(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace &fespace, ParGridFunction &x, Array<int> &ess_bdr, FunctionCoefficient &bdr);
+      void assemble(ParBilinearForm &a, ParLinearForm &f, ParFiniteElementSpace &fespace, ParGridFunction &x, Array<int> &ess_bdr, FunctionCoefficient &bdr);
+      void solve(ParBilinearForm &a, ParLinearForm &f,  ParGridFunction &x);
       bool refine(ThresholdRefiner &refiner);
 
       void exact_error(int cycle, int dofs, double solution_time, double refinement_time, double assembly_time, ParGridFunction &x, FunctionCoefficient &u);
@@ -56,6 +56,9 @@ namespace AspDEQuFEL
       //Data parameters
       vector<error_values> table_vector;
       ParMesh *pmesh;
+
+      HypreParMatrix A;
+      Vector B, X;
 
       //Parallel Parameters
       //Reorder elements
