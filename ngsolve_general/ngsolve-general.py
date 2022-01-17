@@ -423,7 +423,7 @@ class Poisson:
                 if __output__:
                     self.exact_error(cycle, ref_time, sol_time, assem_time)
                 
-                if self.fes.ndof < self.max_dof:
+                if self.fes.ndof >= self.max_dof:
                     break
                 
                 if __timing__:
