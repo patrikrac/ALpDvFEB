@@ -630,7 +630,7 @@ namespace AspDEQuFEL
         convergence_table.add_value("Linfty", Linfty_error);
         convergence_table.add_value("sTime", solution_time);
         convergence_table.add_value("rTime", refinement_time);
-        convergence_table.add_value("assemTime", values.assembly_time);
+        convergence_table.add_value("assemTime", assembly_time);
 
         metrics values = {};
         values.max_error = Linfty_error;
