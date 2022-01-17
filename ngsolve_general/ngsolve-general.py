@@ -345,7 +345,7 @@ class Poisson:
 
         f.write("\t\t\tcycle & $n_{cells} $ & $n_{dof}$ & $\\left\\|u_h - I_hu\\right\\| _{L_2}$ & $\\left\\|u_h - I_hu\\right\\| _{L_\\infty}$ & $t_{solve}$ & $t_{refine}$ & $t_{assembly}$\\\ \\hline\n")
         for m in self.table_list:
-            f.write("\t\t\t{} & {} & {} & {:.3e} & {:.3e}\\\ \hline\n".format(m.cycle, m.cells, m.dofs, m.l2_error, m.max_error))
+            f.write("\t\t\t{} & {} & {} & {:.3e} & {:.3e} & {:.3e}\\\ \hline\n".format(m.cycle, m.cells, m.dofs, m.l2_error, m.max_error, m.solution_time))
             plot_l2.write("{} {}\n".format(m.dofs, m.l2_error))
             plot_max.write("{} {}\n".format(m.dofs, m.max_error))
             plot_p1.write("{} {}\n".format(m.dofs, m.error_p1))
