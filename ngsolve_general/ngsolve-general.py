@@ -92,7 +92,7 @@ class Poisson:
         #Get the Bilinear and Linear form aswell as the solver.
         (self.a, self.f, self.c) = self.setup_system()
         
-        self.bvp = BVP(bf=self.a, lf=self.f, gf=self.gfu, pre=self.c, solver = CGSolver(self.a, self.c), tol=1e-12, maxsteps=2000)
+        self.bvp = BVP(bf=self.a, lf=self.f, gf=self.gfu, pre=self.c, solver = CGSolver(self.a.mat, self.c.mat), tol=1e-12, maxsteps=2000)
 
 
     def make_mesh(self):
