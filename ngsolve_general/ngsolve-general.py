@@ -458,4 +458,4 @@ if __name__ == "__main__":
         e = Poisson(int(sys.argv[1]), int(sys.argv[2]))
         e.do()
     else: 
-        print("usage: python3.8/ngspy ngsolve-general.py <order> <max_dof>")
+        print("usage: ngspy/python3.8 ngsolve-general.py <order> <max_dof>")

@@ -12,3 +12,4 @@ class Timer:
     def printTimer(self) -> float:
         end = time.perf_counter()
         print("Elapsed time: {}s".format(end - self.start))
+        return end - self.start
