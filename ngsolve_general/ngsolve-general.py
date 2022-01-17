@@ -400,47 +400,44 @@ class Poisson:
         ref_time = 0.0
         sol_time = 0.0
         assem_time = 0.0
-        
-        while True:
-            self.gfu.Set(self.g, definedon=self.mesh.Boundaries("bnd"))
-            
-            if __timing__:
-                self.timer.startTimer()
+        with TaskManager():
+            while True:
+                self.gfu.Set(self.g, definedon=self.mesh.Boundaries("bnd"))
                 
-            with TaskManager():
+                if __timing__:
+                    self.timer.startTimer()
+
                 self.assemble()
-            
-            if __timing__:
-                assem_time = self.timer.printTimer()
-            
-            if __timing__:
-                self.timer.startTimer()
-
-            with TaskManager():
-                self.solve()
-            
-            if __timing__:
-                sol_time = self.timer.printTimer()
-
-            if __output__:
-                self.exact_error(cycle, ref_time, sol_time, assem_time)
-            
-            if self.fes.ndof > self.max_dof:
-                break
-            
-            if __timing__:
-                self.timer.startTimer()
                 
-            with TaskManager():
+                if __timing__:
+                    assem_time = self.timer.printTimer()
+                
+                if __timing__:
+                    self.timer.startTimer()
+
+                self.solve()
+                
+                if __timing__:
+                    sol_time = self.timer.printTimer()
+
+                if __output__:
+                    self.exact_error(cycle, ref_time, sol_time, assem_time)
+                
+                if self.fes.ndof > self.max_dof:
+                    break
+                
+                if __timing__:
+                    self.timer.startTimer()
+           
                 self.estimate_error()
                 self.mesh.Refine()
-            
-            if __timing__:
-                ref_time = self.timer.printTimer()
+                
+                if __timing__:
+                    ref_time = self.timer.printTimer()
 
 
-            print("Cycle: {}, DOFs: {}".format(cycle, self.fes.ndof))
-            cycle += 1
+                print("Cycle: {}, DOFs: {}".format(cycle, self.fes.ndof))
+                cycle += 1
         
         if __output__:
             self.output_vtk(cycle)
