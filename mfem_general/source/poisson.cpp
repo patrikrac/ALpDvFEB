@@ -39,15 +39,16 @@ namespace AspDEQuFEL
     {
         const char *mesh_file = "../data/unit_cube.mesh";
         Mesh mesh(mesh_file);
-        for (int i = 0; i < 3; i++)
-        {
-            mesh.UniformRefinement();
-        }
 
         //Turns the Quad mesh (which supports hanging nodes) to a tetrahedral mesh without hanging nodes
         if (!nc_simplices)
         {
             mesh = Mesh::MakeSimplicial(mesh);
+        }
+
+        for (int i = 0; i < 3; i++)
+        {
+            mesh.UniformRefinement();
         }
 
         mesh.Finalize(true);
@@ -113,7 +114,7 @@ namespace AspDEQuFEL
     //----------------------------------------------------------------
     //Solve the Problem on the current mesh
     //----------------------------------------------------------------
-    void Poisson::solve(ParBilinearForm &a, ParLinearForm &f,  ParGridFunction &x)
+    void Poisson::solve(ParBilinearForm &a, ParLinearForm &f, ParGridFunction &x)
     {
         HypreBoomerAMG *amg = new HypreBoomerAMG(A);
         amg->SetPrintLevel(0);
@@ -289,8 +290,9 @@ namespace AspDEQuFEL
         values.solution_time = solution_time;
         values.refinement_time = refinement_time;
         values.assembly_time = assembly_time;
-        values.cells = pmesh->GetNE();
-        cout << values.cells << endl;
+        int local_cells = pmesh->GetNE();
+        MPI_Reduce(&local_cells, &values.cells, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+        
         values.max_error = x.ComputeMaxError(u);
         values.l2_error = x.ComputeL2Error(u);
 
@@ -312,6 +314,7 @@ namespace AspDEQuFEL
         {
             cout << "Max error for step " << cycle << ": " << setprecision(3) << scientific << values.max_error << endl;
             cout << "L2 error: " << setprecision(3) << scientific << values.l2_error << endl;
+            cout << "Elements" << values.cells << endl;
         }
     }
 
