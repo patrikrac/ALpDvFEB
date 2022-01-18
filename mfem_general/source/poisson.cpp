@@ -314,7 +314,6 @@ namespace AspDEQuFEL
         {
             cout << "Max error for step " << cycle << ": " << setprecision(3) << scientific << values.max_error << endl;
             cout << "L2 error: " << setprecision(3) << scientific << values.l2_error << endl;
-            cout << "Elements" << values.cells << endl;
         }
     }
 
