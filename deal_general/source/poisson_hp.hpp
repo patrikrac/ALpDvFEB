@@ -190,7 +190,7 @@ namespace AspDEQuFEL
 
         triangulation.refine_global(3);
 
-        pcout << "Number of active cells: " << triangulation.n_active_cells() << std::endl;
+        pcout << "Number of active cells: " << triangulation.n_global_active_cells() << std::endl;
     }
 
     //------------------------------
@@ -606,7 +606,7 @@ namespace AspDEQuFEL
                                           VectorTools::Linfty_norm);
         const double Linfty_error = VectorTools::compute_global_error(triangulation, difference_per_cell, VectorTools::Linfty_norm);
 
-        const unsigned int n_active_cells = triangulation.n_active_cells();
+        const unsigned int n_active_cells = triangulation.n_global_active_cells();
         const unsigned int n_dofs = dof_handler.n_dofs();
 
         double local_error_p1 = abs(postprocessor1(dof_handler, local_solution) - Solution<dim>().value(Point<dim>(0.125, 0.125, 0.125)));
