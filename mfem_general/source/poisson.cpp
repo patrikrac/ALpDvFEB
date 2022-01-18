@@ -290,6 +290,7 @@ namespace AspDEQuFEL
         values.refinement_time = refinement_time;
         values.assembly_time = assembly_time;
         values.cells = pmesh->GetNE();
+        cout << values.cells << endl;
         values.max_error = x.ComputeMaxError(u);
         values.l2_error = x.ComputeL2Error(u);
 
