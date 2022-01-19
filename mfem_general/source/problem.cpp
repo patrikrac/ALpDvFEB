@@ -30,8 +30,12 @@ double bdr_func(const Vector &p)
    double k = 10.0;
    return sin(k*p(0)) * cos(2*k*p(1)) * exp(p(2)); 
    */
+<<<<<<< HEAD
 
    /*
+=======
+  /*
+>>>>>>> parallel
    double radius = sqrt(p(0) * p(0) + p(1) * p(1));
    double k = 100;
    return tanh(k * (radius - 1.0 / 2.0));

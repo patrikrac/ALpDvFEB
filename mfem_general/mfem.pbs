@@ -1,0 +1,15 @@
+#!/bin/bash -l
+#PBS -N mfem_solver
+#PBS -l nodes=4:ppn=32
+#PBS -l walltime=3:00:00
+#PBS -q normal
+#PBS -M patrik.rac@fau.de -m abe
+#PBS -o $PBS_JOBNAME.out -e $PBS_JOBNAME.err
+
+module load metis/5.1.0
+module load atlas/3.10.3
+module load openmpi/4.0.0-gnu
+
+cd /scratch/uh07ugar/ALpDvFEB/mfem_general/build
+mpirun -np 128 --bind-to-socket ./mfem_general 2 10000000
+

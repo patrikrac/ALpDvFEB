@@ -1,4 +1,9 @@
 .vscode/settings.json
+<<<<<<< HEAD
 deal_general/.vscode/settings.json
 .gitignore
 mfem_general/.vscode/settings.json
+=======
+mfem_general/.vscode/settings.json
+deal_general/.vscode/settings.json
+>>>>>>> parallel

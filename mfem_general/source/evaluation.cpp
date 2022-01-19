@@ -5,7 +5,11 @@
 using namespace mfem;
 using namespace std;
 
+<<<<<<< HEAD
 double PointValueEvaluation::operator()(GridFunction &x, Mesh &mesh) const
+=======
+double PointValueEvaluation::operator()(ParGridFunction &x, ParMesh &mesh) const
+>>>>>>> parallel
 {
    int NE = mesh.GetNE();
    Vector vert_vals;

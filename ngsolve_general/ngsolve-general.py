@@ -29,7 +29,13 @@ class Metrics(NamedTuple):
     dofs: int
     max_error: float
     l2_error: float
+<<<<<<< HEAD
     l2_relative_error: float
+=======
+    refinement_time: float
+    solution_time: float
+    assembly_time: float
+>>>>>>> parallel
     error_p1: float
     error_p2: float
     error_p3: float
@@ -45,29 +51,48 @@ class Poisson:
         
         self.order = order
         self.max_dof = max_dof
+<<<<<<< HEAD
         
         self.timer = Timer()
         
+=======
+        
+        self.timer = Timer()
+        
+>>>>>>> parallel
         #User concfiguration (Problem definition)
          #=============================================
         #Define the general parameters and functions for the Problem
         #Define the parameter alpha which is dependant on the used geometry
         #self.alpha = 1.0/2.0
+<<<<<<< HEAD
         #self.r = sqrt(x*x + y*y)
         #self.phi = atan2(y,x)
+=======
+        #self.r = sqrt((x-0.5)*(x-0.5) + y*y)
+        #self.phi = atan2(y,(x-0.5))
+        #k = 10.0
+>>>>>>> parallel
 
         #Define the boundary function g
         #self.g = CoefficientFunction([(self.r**self.alpha)*sin(self.alpha*self.phi) if bc=="L" else (self.r**self.alpha)*sin(self.alpha*(2*math.pi + self.phi)) if bc=="I" else 0 for bc in self.mesh.GetBoundaries()])
-        #self.g = (self.r**self.alpha)*sin(self.alpha*self.phi)*(z*z)
+        #self.g = (self.r**self.alpha)*sin(self.alpha*self.phi)* (z**2)
         self.g=exp(-10*(x+y))*(z*z)
+        #self.g = sin(k*x) * cos(2*k*y) * exp(z)
 
         #The exact solution of the problem. The mesh is divided into different materiels through a line. This is necessary in order to define teh function but can be ommited if the errror estimation isn't wanted.
         #self.uexact = CoefficientFunction([(self.r**self.alpha)*sin(self.alpha*self.phi) if m=="upper" else (self.r**self.alpha)*sin(self.alpha*(2*math.pi + self.phi)) if m=="lower" else 0 for m in self.mesh.GetMaterials()])
-        #self.uexact = (self.r**self.alpha)*sin(self.alpha*self.phi)*(z*z)
+        #self.uexact = (self.r**self.alpha)*sin(self.alpha*self.phi)*(z**2)
         self.uexact = exp(-10*(x+y))*(z*z)
+        #self.uexact = sin(k*x) * cos(2*k*y) * exp(z)
 
         #Define the right hand side of the poission problem
         self.rhs = -(200*(z*z) + 2)*exp(-10*(x+y))
+<<<<<<< HEAD
+=======
+        #self.rhs = -2.0 * (self.r**self.alpha) * sin(self.alpha*self.phi)
+        #self.rhs = (5*k*k - 1) * sin(k * x) * cos(2 * k * y) * exp(z)
+>>>>>>> parallel
         #=============================================
         
         #Generate the mesh
@@ -78,11 +103,14 @@ class Poisson:
         
         #Setup the FE-Space and the Solution vector with proper boundary conditions, as well as the space and solution for the error estimation
         (self.fes, self.gfu, self.space_flux, self.gf_flux) = self.setup_space()
+        
+        #Setup a grid function corresponding to the exact solution (necessary for error calculation)
+        self.solution = GridFunction(self.fes, autoupdate = True)
 
         #Get the Bilinear and Linear form aswell as the solver.
         (self.a, self.f, self.c) = self.setup_system()
         
-        self.bvp = BVP(bf=self.a, lf=self.f, gf=self.gfu, pre=self.c)
+        self.bvp = BVP(bf=self.a, lf=self.f, gf=self.gfu, pre=self.c, prec=1e-12, maxsteps=2000)
 
 
     def make_mesh(self):
@@ -137,7 +165,12 @@ class Poisson:
         f += self.rhs*v*dx
         
         #Define the solver to be used to solve the problem
+<<<<<<< HEAD
         c = Preconditioner(a, type = "local")
+=======
+        #c = MultiGridPreconditioner(a, inverse = "sparsecholesky")
+        c = Preconditioner(a, type="bddc")
+>>>>>>> parallel
 
         return (a,f,c)
     
@@ -160,19 +193,22 @@ class Poisson:
         maxerr = max(eta2)
 
         for el in self.mesh.Elements():
+<<<<<<< HEAD
             self.mesh.SetRefinementFlag(el, eta2[el.nr] > 0.3*maxerr)
 
+=======
+            self.mesh.SetRefinementFlag(el, eta2[el.nr] > 0.2*maxerr)
+>>>>>>> parallel
 
+    def assemble(self):
+        self.a.Assemble()
+        self.f.Assemble()
+        
     def solve(self):
         """
         Solve the Problem by assembling the system and using the predefined solver.
         """
-        self.a.Assemble()
-
-        self.f.Assemble()
-
         self.c.Update()
-
         self.bvp.Do()
 
 
@@ -186,14 +222,14 @@ class Poisson:
                         names = ["u",],
                         filename="output/solution_{}".format(cycle),
                         subdivision=0)
-
-
+        
         # Exporting the results:
         vtk.Do()
 
     
     def calculate_max_error(self):
         err = 0.0
+<<<<<<< HEAD
         for v in self.mesh.vertices:
             x, y, z = v.point
             ip = self.mesh(x, y, z)
@@ -202,6 +238,18 @@ class Poisson:
         return err
 
     def exact_error(self, cycle):
+=======
+        point_err = 0.0
+        for v in self.mesh.vertices:
+            ip = self.mesh(*v.point)
+            point_err = abs(self.gfu(ip) - self.solution(ip))
+            if err < point_err: 
+                err = point_err 
+        return err
+
+
+    def exact_error(self, cycle, refinement_time, solution_time, assembly_time):
+>>>>>>> parallel
         """
         Takes the current solution and the defined real solution and calculates the exact error.
         The function stores the absolute and relative along with other metrics in the table_list array.
@@ -209,12 +257,17 @@ class Poisson:
 
         l2_error = sqrt(Integrate((self.gfu - self.uexact)**2, self.mesh))
         
+<<<<<<< HEAD
         l2_relative_error = sqrt(Integrate((self.gfu - self.uexact)**2,self.mesh)) / sqrt(Integrate(self.uexact**2, self.mesh))
+=======
+        self.solution.Set(self.uexact)
+>>>>>>> parallel
         
         max_error = self.calculate_max_error()
         #max_error = max(Integrate(self.gfu, self.mesh, VOL, element_wise=True)-Integrate(self.uexact, self.mesh, VOL, element_wise=True))   
 
         ip1 = self.mesh(0.125, 0.125, 0.125)
+<<<<<<< HEAD
         error_p1 = abs(self.gfu(ip1) - self.uexact(ip1))
         
         ip2 = self.mesh(0.25, 0.25, 0.25)
@@ -222,6 +275,15 @@ class Poisson:
         
         ip3 = self.mesh(0.5, 0.5, 0.5)
         error_p3 = abs(self.gfu(ip3) - self.uexact(ip3))
+=======
+        error_p1 = abs(self.gfu(ip1) - self.solution(ip1))
+        
+        ip2 = self.mesh(0.25, 0.25, 0.25)
+        error_p2 = abs(self.gfu(ip2) - self.solution(ip2))
+        
+        ip3 = self.mesh(0.5, 0.5, 0.5)
+        error_p3 = abs(self.gfu(ip3) - self.solution(ip3))
+>>>>>>> parallel
         
         num_cells = len([el for el in self.mesh.Elements()])
 
@@ -230,7 +292,13 @@ class Poisson:
                                        self.fes.ndof, 
                                        max_error,
                                        l2_error,
+<<<<<<< HEAD
                                        l2_relative_error,
+=======
+                                       refinement_time,
+                                       solution_time,
+                                       assembly_time,
+>>>>>>> parallel
                                        error_p1, error_p2, error_p3))
         
         print("Max error: {}".format(max_error))
@@ -241,6 +309,7 @@ class Poisson:
         """
         Uses the table list vector to output an .tex file containing a table with the collected data.
         """
+<<<<<<< HEAD
         f =open("output/table.tex", 'w')
         f.write("\\begin{table}[h]\n")
         f.write("\t\\begin{center}\n")
@@ -254,36 +323,143 @@ class Poisson:
 
         plot_max = open("output/error_max.txt", 'w')
         plot_max.write("$NGSolve$\n")
+=======
+        f =open("output/table_ngsolve.tex", 'w')
+        f.write("\\begin{table}[h]\n")
+        f.write("\t\\begin{center}\n")
+        f.write("\t\t\\begin{tabular}{|c|c|c|c|c|c|c|c|} \hline\n")
+        
+        plot_l2 = open("output/error_l2_ngsolve.txt", 'w')
+        plot_l2.write("NGSolve\n")
+        plot_l2.write("$n_\\text{dof}$\n")
+        plot_l2.write("$\\left\\|u_h - I_hu\\right\\| _{L_2}$\n")
+        plot_l2.write("{}\n".format(len(self.table_list)))
+
+        plot_max = open("output/error_max_ngsolve.txt", 'w')
+        plot_max.write("NGSolve\n")
+>>>>>>> parallel
         plot_max.write("$n_\\text{dof}$\n")
-        plot_max.write("$\\left\\|u - u_h\\right\\| _{L^\\infty}$\n")
+        plot_max.write("$\\left\\|u_h - I_hu\\right\\| _{L_\\infty}$\n")
         plot_max.write("{}\n".format(len(self.table_list)))
         
+<<<<<<< HEAD
         plot_p1 = open("output/error_p1.txt", 'w')
         plot_p1.write("$NGSolve$\n")
+=======
+        plot_p1 = open("output/error_p1_ngsolve.txt", 'w')
+        plot_p1.write("$x_1$\n")
+>>>>>>> parallel
         plot_p1.write("$n_\\text{dof}$\n")
-        plot_p1.write("$\\left\\|u(x_1) - u_h(x_1)\\right\\| $\n")
+        plot_p1.write("$|u(x_i) - u_h(x_i)|$\n")
         plot_p1.write("{}\n".format(len(self.table_list)))
 
+<<<<<<< HEAD
         plot_p2 = open("output/error_p2.txt", 'w')
         plot_p2.write("$NGSolve$\n")
+=======
+        plot_p2 = open("output/error_p2_ngsolve.txt", 'w')
+        plot_p2.write("$x_2$\n")
+>>>>>>> parallel
         plot_p2.write("$n_\\text{dof}$\n")
-        plot_p2.write("$\\left\\|u(x_2) - u_h(x_2)\\right\\| $\n")
+        plot_p2.write("$|u(x_i) - u_h(x_i)|$\n")
         plot_p2.write("{}\n".format(len(self.table_list)))
         
+<<<<<<< HEAD
         plot_p3 = open("output/error_p3.txt", 'w')
         plot_p3.write("$NGSolve$\n")
+=======
+        plot_p3 = open("output/error_p3_ngsolve.txt", 'w')
+        plot_p3.write("$x_3$\n")
+>>>>>>> parallel
         plot_p3.write("$n_\\text{dof}$\n")
-        plot_p3.write("$\\left\\|u(x_3) - u_h(x_3)\\right\\| $\n")
+        plot_p3.write("$|u(x_i) - u_h(x_i)|$\n")
         plot_p3.write("{}\n".format(len(self.table_list)))
+<<<<<<< HEAD
 
         f.write("\t\t\tcycle & \# cells & \# dofs & $\\left\\|u - u_h\\right\\| _{L^\\infty}$ & $\dfrac{\\left\\|u - u_h\\right\\| _{L^\\infty}}{\\left\\|u - u_h\\right\\| _{L^\\infty}}$\\\ \hline\n")
         for m in self.table_list:
             f.write("\t\t\t{} & {} & {} & {:.3e} & {:.3e}\\\ \hline\n".format(m.cycle, m.cells, m.dofs, m.l2_error, m.max_error))
+=======
+        
+        plot_time_dof = open("output/time_dof_ngsolve.txt", 'w')
+        plot_time_dof.write("NGSolve\n")
+        plot_time_dof.write("$n_\\text{dof}$\n")
+        plot_time_dof.write("$Time [s]$\n")
+        plot_time_dof.write("{}\n".format(len(self.table_list)))
+        
+        plot_time_l2 = open("output/time_l2_ngsolve.txt", 'w')
+        plot_time_l2.write("NGSolve\n")
+        plot_time_l2.write("$Time [s]$\n")
+        plot_time_l2.write("$\\left\\|u_h - I_hu\\right\\| _{L_2}$\n")
+        plot_time_l2.write("{}\n".format(len(self.table_list)))
+        
+        plot_time_max = open("output/time_max_ngsolve.txt", 'w')
+        plot_time_max.write("NGSolve\n")
+        plot_time_max.write("$Time [s]$\n")
+        plot_time_max.write("$\\left\\|u_h - I_hu\\right\\| _{L_\\infty}$\n")
+        plot_time_max.write("{}\n".format(len(self.table_list)))
+        
+        plot_refinement_time_dof = open("output/refinement_time_dof_ngsolve.txt", 'w')
+        plot_refinement_time_dof.write("NGSolve\n")
+        plot_refinement_time_dof.write("$n_\\text{dof}$\n")
+        plot_refinement_time_dof.write("$Time [s]$\n")
+        plot_refinement_time_dof.write("{}\n".format(len(self.table_list)))
+        
+        plot_refinement_time_l2 = open("output/refinement_time_l2_ngsolve.txt", 'w')
+        plot_refinement_time_l2.write("NGSolve\n")
+        plot_refinement_time_l2.write("$Time [s]$\n")
+        plot_refinement_time_l2.write("$\\left\\|u_h - I_hu\\right\\| _{L_2}$\n")
+        plot_refinement_time_l2.write("{}\n".format(len(self.table_list)))
+        
+        plot_refinement_time_max = open("output/refinement_time_max_ngsolve.txt", 'w')
+        plot_refinement_time_max.write("NGSolve\n")
+        plot_refinement_time_max.write("$Time [s]$\n")
+        plot_refinement_time_max.write("$\\left\\|u_h - I_hu\\right\\| _{L_\\infty}$\n")
+        plot_refinement_time_max.write("{}\n".format(len(self.table_list)))
+        
+        plot_assembly_time_dof = open("output/assembly_time_dof_ngsolve.txt", 'w')
+        plot_assembly_time_dof.write("NGSolve\n")
+        plot_assembly_time_dof.write("$n_\\text{dof}$\n")
+        plot_assembly_time_dof.write("$Time [s]$\n")
+        plot_assembly_time_dof.write("{}\n".format(len(self.table_list)))
+        
+        plot_assembly_time_l2 = open("output/assembly_time_l2_ngsolve.txt", 'w')
+        plot_assembly_time_l2.write("NGSolve\n")
+        plot_assembly_time_l2.write("$Time [s]$\n")
+        plot_assembly_time_l2.write("$\\left\\|u_h - I_hu\\right\\| _{L_2}$\n")
+        plot_assembly_time_l2.write("{}\n".format(len(self.table_list)))
+        
+        plot_assembly_time_max = open("output/assembly_time_max_ngsolve.txt", 'w')
+        plot_assembly_time_max.write("NGSolve\n")
+        plot_assembly_time_max.write("$Time [s]$\n")
+        plot_assembly_time_max.write("$\\left\\|u_h - I_hu\\right\\| _{L_\\infty}$\n")
+        plot_assembly_time_max.write("{}\n".format(len(self.table_list)))
+
+        f.write("\t\t\tcycle & $n_{cells} $ & $n_{dof}$ & $\\left\\|u_h - I_hu\\right\\| _{L_2}$ & $\\left\\|u_h - I_hu\\right\\| _{L_\\infty}$ & $t_{solve}$ & $t_{refine}$ & $t_{assembly}$\\\\ \\hline\n")
+        for m in self.table_list:
+            f.write("\t\t\t{} & {} & {} & {:.3e} & {:.3e} & {:.3e} & {:.3e} & {:.3e}\\\ \hline\n".format(m.cycle, m.cells, m.dofs, m.l2_error, m.max_error, m.solution_time, m.refinement_time, m.assembly_time))
+>>>>>>> parallel
             plot_l2.write("{} {}\n".format(m.dofs, m.l2_error))
             plot_max.write("{} {}\n".format(m.dofs, m.max_error))
             plot_p1.write("{} {}\n".format(m.dofs, m.error_p1))
             plot_p2.write("{} {}\n".format(m.dofs, m.error_p2))
             plot_p3.write("{} {}\n".format(m.dofs, m.error_p3))
+<<<<<<< HEAD
+=======
+            
+            plot_time_dof.write("{} {}\n".format(m.dofs, m.solution_time))
+            plot_refinement_time_dof.write("{} {}\n".format(m.dofs, m.refinement_time))
+            plot_assembly_time_dof.write("{} {}\n".format(m.dofs, m.assembly_time))
+            
+            
+            plot_time_l2.write("{} {}\n".format(m.solution_time, m.l2_error))
+            plot_refinement_time_l2.write("{} {}\n".format(m.refinement_time, m.l2_error))
+            plot_assembly_time_l2.write("{} {}\n".format(m.assembly_time, m.l2_error))
+            
+            plot_time_max.write("{} {}\n".format(m.solution_time, m.max_error))
+            plot_refinement_time_max.write("{} {}\n".format(m.refinement_time, m.max_error))
+            plot_assembly_time_max.write("{} {}\n".format(m.assembly_time, m.max_error))
+>>>>>>> parallel
             
 
         f.write("\t\t\end{tabular}\n")
@@ -296,6 +472,19 @@ class Poisson:
         plot_p1.close()
         plot_p2.close()
         plot_p3.close()
+        
+        plot_time_dof.close()
+        plot_refinement_time_dof.close()
+        plot_assembly_time_dof.close()
+        
+        
+        plot_time_l2.close()
+        plot_refinement_time_l2.close()
+        plot_assembly_time_l2.close()
+        
+        plot_time_max.close()
+        plot_refinement_time_max.close()
+        plot_assembly_time_max.close()
 
 
     def do(self):
@@ -304,6 +493,7 @@ class Poisson:
 
         """
         cycle = 0
+<<<<<<< HEAD
         while self.fes.ndof < self.max_dof:
             self.mesh.Refine()
 
@@ -329,6 +519,54 @@ class Poisson:
         if __output__:
             self.output_vtk(cycle)
             self.output_Table()
+=======
+        ref_time = 0.0
+        sol_time = 0.0
+        assem_time = 0.0
+        with TaskManager():
+            while True:
+                self.gfu.Set(self.g, definedon=self.mesh.Boundaries("bnd"))
+                
+                if __timing__:
+                    self.timer.startTimer()
+
+                self.assemble()
+                
+                if __timing__:
+                    assem_time = self.timer.printTimer()
+                
+                if __timing__:
+                    self.timer.startTimer()
+
+                self.solve()
+                
+                if __timing__:
+                    sol_time = self.timer.printTimer()
+
+                if __output__:
+                    self.exact_error(cycle, ref_time, sol_time, assem_time)
+                
+                if self.fes.ndof >= self.max_dof:
+                    break
+                
+                if __timing__:
+                    self.timer.startTimer()
+           
+                self.estimate_error()
+                self.mesh.Refine()
+                
+                if __timing__:
+                    ref_time = self.timer.printTimer()
+
+
+                print("Cycle: {}, DOFs: {}".format(cycle, self.fes.ndof))
+                cycle += 1
+        
+        if __output__:
+            self.output_vtk(cycle)
+            
+        self.output_Table()
+>>>>>>> parallel
         
 
 
@@ -340,5 +578,10 @@ if __name__ == "__main__":
             os.makedirs(result_directory)
         e = Poisson(int(sys.argv[1]), int(sys.argv[2]))
         e.do()
+<<<<<<< HEAD
     else:    
         print("usage: python3.8 ngsolve-general.py <order> <max_dof>")
+=======
+    else: 
+        print("usage: python3.8/ngspy ngsolve-general.py <order> <max_dof>")
+>>>>>>> parallel
