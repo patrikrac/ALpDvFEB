@@ -148,7 +148,7 @@ class Poisson:
         
         #Define the solver to be used to solve the problem
         #c = MultiGridPreconditioner(a, inverse = "sparsecholesky")
-        c = Preconditioner(a, type="bddc")
+        c = Preconditioner(a, type="h1amg")
 
         return (a,f,c)
     
