@@ -17,7 +17,7 @@ from netgen.geom2d import CSG2d, Rectangle
 
 from Timer import Timer
 
-__output__ = True
+__output__ = False
 __timing__ = True
 
 class Metrics(NamedTuple):
