@@ -144,6 +144,7 @@ namespace AspDEQuFEL
 
         return true;*/
         pmesh->UniformRefinement();
+        return true;
     }
 
     //----------------------------------------------------------------
