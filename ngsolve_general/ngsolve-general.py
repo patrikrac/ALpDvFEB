@@ -107,11 +107,8 @@ class Poisson:
         geo = CSGeometry()
         #geo = CSG2d()
         geo.Add (brick)
-        ngmesh = geo.GenerateMesh()
-        for i in range(0,3):
-            ngmesh.Refine()
 
-        return Mesh(ngmesh)
+        return Mesh(geo.GenerateMesh(maxh=0.125))
         
 
     def setup_space(self):
