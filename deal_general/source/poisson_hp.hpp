@@ -303,12 +303,12 @@ namespace AspDEQuFEL
     {
         LinearAlgebraPETSc::MPI::Vector completely_distributed_solution(locally_owned_dofs, mpi_communicator);
 
-        SolverControl solver_control(2000, 1e-12);
+        SolverControl solver_control(dof_handler.n_dofs(), 1e-12);
         LinearAlgebraPETSc::SolverCG solver(solver_control, mpi_communicator);
 
         LinearAlgebraPETSc::MPI::PreconditionAMG preconditioner;
         LinearAlgebraPETSc::MPI::PreconditionAMG::AdditionalData data;
-        //data.symmetric_operator = true;
+        data.symmetric_operator = true;
         preconditioner.initialize(system_matrix, data);
 
         solver.solve(system_matrix, completely_distributed_solution, system_rhs, preconditioner);
