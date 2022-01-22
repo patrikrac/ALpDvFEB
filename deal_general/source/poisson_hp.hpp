@@ -301,10 +301,11 @@ namespace AspDEQuFEL
     template <int dim>
     void PoissonHP<dim>::solve()
     {
+         pcout << "   Solved in " << system_matrix.is_symetric() << " iterations."
+              << std::endl;
         LinearAlgebraPETSc::MPI::Vector completely_distributed_solution(locally_owned_dofs, mpi_communicator);
 
         SolverControl solver_control(2000, 1e-12);
-        solver_control.clear_failure_criterion();
         LinearAlgebraPETSc::SolverCG solver(solver_control, mpi_communicator);
 
         LinearAlgebraPETSc::MPI::PreconditionAMG preconditioner;
@@ -313,7 +314,7 @@ namespace AspDEQuFEL
         preconditioner.initialize(system_matrix, data);
 
         solver.solve(system_matrix, completely_distributed_solution, system_rhs, preconditioner);
-        pcout << "   Solved in " << solver_control.last_step() << " iterations with residual " << solver_control.last_value() << "."
+        pcout << "   Solved in " << solver_control.last_step() << " iterations."
               << std::endl;
 
         constraints.distribute(completely_distributed_solution);
