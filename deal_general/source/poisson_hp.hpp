@@ -304,7 +304,7 @@ namespace AspDEQuFEL
         LinearAlgebraPETSc::MPI::Vector completely_distributed_solution(locally_owned_dofs, mpi_communicator);
 
         SolverControl solver_control(2000, 1e-12);
-        LinearAlgebraPETSc::SolverBiCG solver(solver_control, mpi_communicator);
+        LinearAlgebraPETSc::SolverGMRES solver(solver_control, mpi_communicator);
 
         LinearAlgebraPETSc::MPI::PreconditionAMG preconditioner;
         LinearAlgebraPETSc::MPI::PreconditionAMG::AdditionalData data;
