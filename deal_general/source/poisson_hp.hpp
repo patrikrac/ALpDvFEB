@@ -308,7 +308,7 @@ namespace AspDEQuFEL
 
         LinearAlgebraPETSc::MPI::PreconditionAMG preconditioner;
         LinearAlgebraPETSc::MPI::PreconditionAMG::AdditionalData data;
-        data.symmetric_operator = true;
+        //data.symmetric_operator = true;
         preconditioner.initialize(system_matrix, data);
 
         solver.solve(system_matrix, completely_distributed_solution, system_rhs, preconditioner);
