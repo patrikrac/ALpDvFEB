@@ -301,7 +301,7 @@ namespace AspDEQuFEL
     template <int dim>
     void PoissonHP<dim>::solve()
     {
-         pcout << "   Solved in " << system_matrix.is_symetric() << " iterations."
+         pcout << "   Solved in " << system_matrix.is_symmetric() << " iterations."
               << std::endl;
         LinearAlgebraPETSc::MPI::Vector completely_distributed_solution(locally_owned_dofs, mpi_communicator);
 
