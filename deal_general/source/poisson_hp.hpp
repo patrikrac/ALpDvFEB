@@ -135,8 +135,8 @@ namespace AspDEQuFEL
                                              pcout(std::cout, (this_mpi_process == 0)),
                                              dof_handler(triangulation),
                                              max_degree(dim <= 2 ? 7 : 5),
-                                             postprocessor1(Point<3>(0.5, 0.125, 0.875)),
-                                             postprocessor2(Point<3>(0.5, 0.25, 0.875)),
+                                             postprocessor1(Point<3>(0.125, 0.125, 0.875)),
+                                             postprocessor2(Point<3>(0.25, 0.25, 0.875)),
                                              postprocessor3(Point<3>(0.5, 0.5, 0.875))
     {
         for (unsigned int degree = 2; degree <= max_degree; degree++)
@@ -304,7 +304,7 @@ namespace AspDEQuFEL
         LinearAlgebraPETSc::MPI::Vector completely_distributed_solution(locally_owned_dofs, mpi_communicator);
 
         SolverControl solver_control(2000, 1e-12);
-        LinearAlgebraPETSc::SolverGMRES solver(solver_control, mpi_communicator);
+        LinearAlgebraPETSc::SolverCG solver(solver_control, mpi_communicator);
 
         LinearAlgebraPETSc::MPI::PreconditionAMG preconditioner;
         LinearAlgebraPETSc::MPI::PreconditionAMG::AdditionalData data;
@@ -609,8 +609,8 @@ namespace AspDEQuFEL
         const unsigned int n_active_cells = triangulation.n_global_active_cells();
         const unsigned int n_dofs = dof_handler.n_dofs();
 
-        double local_error_p1 = abs(postprocessor1(dof_handler, local_solution) - Solution<dim>().value(Point<dim>(0.5, 0.125, 0.875)));
-        double local_error_p2 = abs(postprocessor2(dof_handler, local_solution) - Solution<dim>().value(Point<dim>(0.5, 0.25, 0.875)));
+        double local_error_p1 = abs(postprocessor1(dof_handler, local_solution) - Solution<dim>().value(Point<dim>(0.125, 0.125, 0.875)));
+        double local_error_p2 = abs(postprocessor2(dof_handler, local_solution) - Solution<dim>().value(Point<dim>(0.25, 0.25, 0.875)));
         double local_error_p3 = abs(postprocessor3(dof_handler, local_solution) - Solution<dim>().value(Point<dim>(0.5, 0.5, 0.875)));
         double error_p1 = Utilities::MPI::min(local_error_p1, mpi_communicator);
         double error_p2 = Utilities::MPI::min(local_error_p2, mpi_communicator);

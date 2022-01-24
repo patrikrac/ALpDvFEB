@@ -301,8 +301,8 @@ namespace AspDEQuFEL
         values.max_error = x.ComputeMaxError(u);
         values.l2_error = x.ComputeL2Error(u);
 
-        double p1[] = {0.5, 0.125, 0.875};
-        double p2[] = {0.5, 0.25, 0.875};
+        double p1[] = {0.125, 0.125, 0.875};
+        double p2[] = {0.25, 0.25, 0.875};
         double p3[] = {0.5, 0.5, 0.875};
 
         double local_error_p1 = abs(postprocessor1(x, *pmesh) - bdr_func(Vector(p1, 3)));
