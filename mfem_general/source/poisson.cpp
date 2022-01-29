@@ -135,12 +135,7 @@ namespace AspDEQuFEL
     bool Poisson::refine(ThresholdRefiner &refiner)
     {
         
-        refiner.Apply(*pmesh);
-
-        if (refiner.Stop())
-        {
-            return false;
-        }
+        pmesh->UniformRefinement();
 
         return true;
 

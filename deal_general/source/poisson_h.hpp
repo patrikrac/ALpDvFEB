@@ -291,17 +291,7 @@ namespace AspDEQuFEL
     template <int dim>
     void Poisson<dim>::refine_grid()
     {
-        Vector<float> estimated_error_per_cell(triangulation.n_active_cells());
-
-        KellyErrorEstimator<dim>::estimate(dof_handler,
-                                           QGauss<dim - 1>(fe.degree + 1),
-                                           std::map<types::boundary_id, const Function<dim> *>(),
-                                           local_solution,
-                                           estimated_error_per_cell);
-
-        parallel::distributed::GridRefinement::refine_and_coarsen_fixed_number(triangulation, estimated_error_per_cell, 0.15, 0);
-
-        triangulation.execute_coarsening_and_refinement();
+        triangulation.refine_global(1);
     }
 
     //------------------------------

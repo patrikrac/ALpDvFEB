@@ -157,21 +157,8 @@ class Poisson:
         """
         Estimate the error using an ZZ-error estimator described in the documentation.
         """
-        # FEM-flux
-        flux =  grad(self.gfu)
-
-        # interpolate into H(div)
-        self.gf_flux.Set(flux)
-
-        # compute estimator:
-        err = (flux-self.gf_flux)*(flux-self.gf_flux)
-        eta2 = Integrate(err, self.mesh, VOL, element_wise=True)
-
-        # mark for refinement:
-        maxerr = max(eta2)
-
         for el in self.mesh.Elements():
-            self.mesh.SetRefinementFlag(el, eta2[el.nr] > 0.2*maxerr)
+            self.mesh.SetRefinementFlag(el)
 
     def assemble(self):
         self.a.Assemble()
