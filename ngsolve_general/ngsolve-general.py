@@ -158,7 +158,7 @@ class Poisson:
         Estimate the error using an ZZ-error estimator described in the documentation.
         """
         for el in self.mesh.Elements():
-            self.mesh.SetRefinementFlag(el)
+            self.mesh.SetRefinementFlag(el, True)
 
     def assemble(self):
         self.a.Assemble()
