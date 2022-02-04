@@ -388,6 +388,7 @@ class Poisson:
         assem_time = 0.0
         with TaskManager():
             while True:
+                print("Cycle: {}, DOFs: {}".format(cycle, self.fes.ndof))
                 self.gfu.Set(self.g, definedon=self.mesh.Boundaries("bnd"))
                 
                 if __timing__:
@@ -421,8 +422,6 @@ class Poisson:
                 if __timing__:
                     ref_time = self.timer.printTimer()
 
-
-                print("Cycle: {}, DOFs: {}".format(cycle, self.fes.ndof))
                 cycle += 1
         
         if __output__:
