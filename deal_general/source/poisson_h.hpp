@@ -62,6 +62,7 @@ namespace AspDEQuFEL
 
     private:
         void make_grid();
+
         void setup_system();
         void assemble_system();
         int get_n_dof();
@@ -119,9 +120,9 @@ namespace AspDEQuFEL
                                                     pcout(std::cout, (this_mpi_process == 0)),
                                                     fe(order),
                                                     dof_handler(triangulation),
-                                                    postprocessor1(Point<3>(0.125, 0.125, 0.125)),
-                                                    postprocessor2(Point<3>(0.25, 0.25, 0.25)),
-                                                    postprocessor3(Point<3>(0.5, 0.5, 0.5))
+                                                    postprocessor1(Point<3>(0.125, 0.125, 0.875)),
+                                                    postprocessor2(Point<3>(0.25, 0.25, 0.875)),
+                                                    postprocessor3(Point<3>(0.5, 0.5, 0.875))
     {
     }
 
@@ -146,6 +147,7 @@ namespace AspDEQuFEL
         return time;
     }
 #endif
+
     //------------------------------
     //Construct the Grid the problem is beeing solved on.
     //Define the default coarsaty / refinement of the grid
@@ -551,9 +553,9 @@ namespace AspDEQuFEL
         const unsigned int n_active_cells = triangulation.n_global_active_cells();
         const unsigned int n_dofs = dof_handler.n_dofs();
 
-        double local_error_p1 = abs(postprocessor1(dof_handler, local_solution) - Solution<dim>().value(Point<dim>(0.125, 0.125, 0.125)));
-        double local_error_p2 = abs(postprocessor2(dof_handler, local_solution) - Solution<dim>().value(Point<dim>(0.25, 0.25, 0.25)));
-        double local_error_p3 = abs(postprocessor3(dof_handler, local_solution) - Solution<dim>().value(Point<dim>(0.5, 0.5, 0.5)));
+        double local_error_p1 = abs(postprocessor1(dof_handler, local_solution) - Solution<dim>().value(Point<dim>(0.125, 0.125, 0.875)));
+        double local_error_p2 = abs(postprocessor2(dof_handler, local_solution) - Solution<dim>().value(Point<dim>(0.25, 0.25, 0.875)));
+        double local_error_p3 = abs(postprocessor3(dof_handler, local_solution) - Solution<dim>().value(Point<dim>(0.5, 0.5, 0.875)));
         double error_p1 = Utilities::MPI::min(local_error_p1, mpi_communicator);
         double error_p2 = Utilities::MPI::min(local_error_p2, mpi_communicator);
         double error_p3 = Utilities::MPI::min(local_error_p3, mpi_communicator);
@@ -582,12 +584,18 @@ namespace AspDEQuFEL
         values.error_p3 = error_p3;
         values.n_dofs = n_dofs;
         values.cycle = cycle;
+        values.cells = n_active_cells;
+        values.solution_time = solution_time;
+        values.refinement_time = refinement_time;
+        values.assembly_time = assembly_time;
 
+        convergence_vector.push_back(values);
     }
 
     //------------------------------
     //Run the problem.
     //------------------------------
+    template <int dim>
     void Poisson<dim>::run()
     {
         pcout << "Running on " << n_mpi_processes << " MPI rank(s)..." << std::endl;

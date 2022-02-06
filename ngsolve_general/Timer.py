@@ -11,10 +11,6 @@ class Timer:
     
     def printTimer(self) -> float:
         end = time.perf_counter()
-<<<<<<< HEAD
-        print("Elapsed time: {}s".format(end - self.start))
-=======
         res_time = end - self.start
         print("Elapsed time: {}s".format(res_time))
         return (res_time)
->>>>>>> parallel
