@@ -11,7 +11,7 @@ The used libraries include
 
 The programms build the bases to solve PDEs using an h-adaptive mesh refinement loop (and for Deal.ii also hp-adaptive).
 
-The programms are written as the main work of my Bachelor Thesis at Friedrich-Alexander Univerität Erlangen-Nürnberg titled `Adaptive solution of partial differential equations using different finite-element libraries`.
+The programms are written as the main work of my Bachelor Thesis at Friedrich-Alexander Universität Erlangen-Nürnberg titled `Adaptive solution of partial differential equations using different finite-element libraries`.
 
 To visualize the output one needs a VTK visualization tool (I personally recommend [Visit](https://visit-dav.github.io/visit-website/index.html)).
 
