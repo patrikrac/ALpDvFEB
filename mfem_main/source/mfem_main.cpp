@@ -9,7 +9,7 @@ int main(int argc, char *argv[])
 
   if (argc != 3)
   {
-    std::cout << "Usage: ./mfem_general order max_dofs" << std::endl;
+    std::cout << "Usage: ./mfem_main order max_dofs" << std::endl;
     return -1;
   }
   

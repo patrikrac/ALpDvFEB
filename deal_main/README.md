@@ -12,7 +12,7 @@ The parallel build of the deal.ii library requires the `PETSc`, `METIS` and `P4e
 
 ## Building
 The programm comes with a CMake-File used to create the buildsystem.
-1. `cd deal_general`
+1. `cd deal_main`
 2. `mkdir build`
 3. `cd build`
 4. `cmake ..` -> Might require the path to the deal.ii build directory

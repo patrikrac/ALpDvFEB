@@ -5,7 +5,7 @@ Program using Netgen/NGSolve for the solution of elliptic PDEs using adaptive me
 The problem is solved using an adaptivity strategy with an gradient recovery error estimator.
 The adaptivity and Problem geometry can be easily changed without affecting the performance of the programm.
 
-The program runns with the command "netgen ngsolve-general.py" or "python3.8 ngsolve-general.py"
+The program runns with the command "ngspy ngsolve_main.py" or "python3.8 ngsolve_main.py"
 """
 
 import sys
@@ -222,7 +222,6 @@ class Poisson:
         self.solution.Set(self.uexact)
         
         max_error = self.calculate_max_error()
-        #max_error = max(Integrate(self.gfu, self.mesh, VOL, element_wise=True)-Integrate(self.uexact, self.mesh, VOL, element_wise=True))   
 
         ip1 = self.mesh(0.125, 0.125, 0.875)
         error_p1 = abs(self.gfu(ip1) - self.solution(ip1))

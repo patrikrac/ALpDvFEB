@@ -1,7 +1,7 @@
 # ALpDvFEB
-Collection of Programms using different Finite-Element Libraries to solve partial differential equations.
+Collection of programs using different finite-element libraries to adaptively solve partial differential equations.
 The used libraries include 
-- deal.ii
+- Deal.ii
   - For more information and installation instructions visit <https://www.dealii.org>
 - Netgen/NGSolve
   - For more information and installation instructions visit <https://ngsolve.org>
@@ -9,9 +9,9 @@ The used libraries include
   - For more information and installation instructions visit <https://mfem.org> and <https://mfem.org/howto/build-systems/> for instructions on how to build using cmake
   - The parallel build of MFEM will require additional libraries
 
-The programms build the bases to solve PDEs using an adaptive mesh refinement loop (and in some cases hp-adaptive elements).
+The programms build the bases to solve PDEs using an h-adaptive mesh refinement loop (and for Deal.ii also hp-adaptive).
 
-The programms are written as the main work of my Bachelor Thesis at Friedrich-Alexander University Erlangen-Nuernberg. The german title of the thesis is "Adaptive Lösung partieller Differentialgleichungen mit verschiedenen Finite-Elemente Bibliotheken".
+The programms are written as the main work of my Bachelor Thesis at Friedrich-Alexander Univerität Erlangen-Nürnberg titled `Adaptive solution of partial differential equations using different finite-element libraries`.
 
-All programms output teh soulution as vtk-files which can be visualised by any compatiable tool (I personally recommend [Visit](https://visit-dav.github.io/visit-website/index.html)).
+To visualize the output one needs a VTK visualization tool (I personally recommend [Visit](https://visit-dav.github.io/visit-website/index.html)).
 
