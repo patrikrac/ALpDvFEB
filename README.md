@@ -6,9 +6,10 @@ The used libraries include
 - Netgen/NGSolve
   - For more information and installation instructions visit <https://ngsolve.org>
 - MFEM
-  - For more information and installation instructions visit <https://mfem.org> and <https://mfem.org/howto/build-systems/> for instructions on how to build using cmake
+  - For more information and installation instructions visit <https://mfem.org> and <https://mfem.org/howto/build-systems/> for instructions on how to build using CMake
   - The parallel build of MFEM will require additional libraries
-
+  
+The `README` of each program also details the installation and execution process.
 The programms build the bases to solve PDEs using an h-adaptive mesh refinement loop (and for Deal.ii also hp-adaptive).
 
 The programms are written as the main work of my Bachelor Thesis at Friedrich-Alexander Universität Erlangen-Nürnberg titled `Adaptive solution of partial differential equations using different finite-element libraries`.
