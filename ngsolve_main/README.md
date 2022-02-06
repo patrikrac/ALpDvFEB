@@ -6,10 +6,8 @@ The graphical user interface is not used and hence a source build is sufficient.
 
 ## Execution
 ### Serial
-Usage: `python3.8 ngsolve-general.py <p> <max_dof>` 
-or          `netgen ngsolve-general.py <p> <max_dof>`
+Usage: `python3.8 ngsolve_main.py <p> <max_dof>` 
+or          `netgen ngsolve_main.py <p> <max_dof>` 
+or          `ngspy ngsolve_main.py <p> <max_dof>`
 - _p_: Order of elements to be used.
 - _max\_dof_: Maximum number of degrees of freedum until the programm should terminate  
-
-### Parallel
-tba

@@ -1,5 +1,6 @@
 # ALpDvFEB
 Collection of Programms using different Finite-Element Libraries to solve partial differential equations.
+This is the Uniform refinement branch used to create reference data to compare to the adaptive methods. All programs feature the same functionality as in the main branch but uniformly refine the mesh for each iteration.
 The used libraries include 
 - deal.ii
   - For more information and installation instructions visit <https://www.dealii.org>

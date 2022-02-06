@@ -12,7 +12,7 @@ Optionally one can choose to just build the serial version by ommiting the extra
 
 ## Building
 The programm comes with a CMake-File used to create the buildsystem. 
-1. `cd mfem_general`
+1. `cd mfem_main`
 2. `mkdir build`
 3. `cd build`
 4. `cmake ..`
@@ -24,9 +24,11 @@ CMake also takes the optional arguments:
 
 ## Execution
 ### Serial
-Usage: `./mfem_general <p> <max_dof>`
+Usage: `./mfem_main <p> <max_dof>`
 - _p_: Order of elements to be used.
 - _max\_dof_: Maximum number of degrees of freedum until the programm should terminate  
 
 ### Parallel
-Usage: `mpirun -np <num_procs> ./mfem_general <p> <max_dof>`
+Usage: `mpirun -np <num_procs> ./mfem_main <p> <max_dof>`
+- _p_: Order of elements to be used.
+- _max\_dof_: Maximum number of degrees of freedum until the programm should terminate
