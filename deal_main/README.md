@@ -2,7 +2,6 @@
 
 ## Installation of the deal.ii library
 The parallel build of the deal.ii library requires the `PETSc`, `METIS` and `P4est` libraries to be installed/built. Additionally `PETSc`has to be configured and build with `Hypre`  (which is usually the case in when not manually installing).
-Optionally one can choose to build only the serial version by ommiting the extra cmake-flags in Step 5.
 1. Clone the deal.ii source from https://github.com/dealii/dealii.
 2. `cd dealii`
 3. `mkdir build`
@@ -24,12 +23,14 @@ CMake also takes the optional arguments:
 - `-DUSE_OUTPUT=OFF` -> Controlls the vtk and txt output of the programm (Default: ON)
 
 ## Execution
-### Serial
-Usage: `./deal_general <p> <max_dof> [-hp]`
+### Serial (Not recommended)
+Usage: `./deal_main <p> <max_dof> [-hp]`
 - _p_: Order of elements to be used.
 - _max\_dof_: Maximum number of degrees of freedum until the programm should terminate 
 - _-hp_: If this flag is set the programm uses hp-refinement instead of the default h-refinement (Parameter _p_ is required but ommited)
 
 ### Parallel
-Usage: `mpirun -np <num_procs> ./deal_general <p> <max_dof>`    
-Hint: Currently hp is not yet supported in the parallel version
+Usage: `mpirun -np <num_procs> ./deal_main <p> <max_dof> [-hp]`
+- _p_: Order of elements to be used.
+- _max\_dof_: Maximum number of degrees of freedum until the programm should terminate 
+- _-hp_: If this flag is set the programm uses hp-refinement instead of the default h-refinement (Parameter _p_ is required but ommited)
