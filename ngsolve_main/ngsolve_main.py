@@ -3,9 +3,7 @@ Created by Patrik Rác
 Program using Netgen/NGSolve for the solution of elliptic PDEs using adaptive mesh refinement.
  
 The problem is solved using an adaptivity strategy with an gradient recovery error estimator.
-The adaptivity and Problem geometry can be easily changed without affecting the performance of the programm.
-
-The program runns with the command "netgen ngsolve-general.py" or "python3.8 ngsolve-general.py"
+The adaptivity and Problem geometry can be easily changed without affecting the performance of the program.
 """
 
 import sys

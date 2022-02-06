@@ -10,7 +10,7 @@ int main(int argc, char **argv)
 {
     if (argc != 3)
     {
-        std::cout << "Usage: ./deal_general degree max_dofs" << std::endl;
+        std::cout << "Usage: ./deal_main degree max_dofs" << std::endl;
         return -1;
     }
 
