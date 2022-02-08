@@ -7,9 +7,9 @@
 using namespace dealii;
 
 //Initialisation of the evaluation points
-const Point<dim> p1(0.5, 0.125, 0.875);
-const Point<dim> p2(0.5, 0.25, 0.875);
-const Point<dim> p3(0.5, 0.5, 0.875);
+const Point<3> p1(0.5, 0.125, 0.875);
+const Point<3> p2(0.5, 0.25, 0.875);
+const Point<3> p3(0.5, 0.5, 0.875);
 
 //----------------------------------------------------------------
 //Class used to evaluate the approx. solution at a given point (If node exists).
